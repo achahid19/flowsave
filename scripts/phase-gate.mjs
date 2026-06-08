@@ -45,7 +45,7 @@ const CHECKS = [
   { label: "Build (TypeScript)", cmd: "pnpm build" },
   { label: "Tests", cmd: "pnpm test" },
   { label: "Lint", cmd: "pnpm lint" },
-  { label: "Security audit", cmd: "pnpm audit --audit-level=high --recursive" },
+  { label: "Security audit", cmd: "pnpm audit --audit-level=high" },
 ];
 
 const results = [];

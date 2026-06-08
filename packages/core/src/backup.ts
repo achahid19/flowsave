@@ -222,7 +222,7 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
       );
     }
     const encrypted = await exportCredentials(config.containerName, passphrase);
-    writeFileSync(join(snapshotPath, '_credentials.enc.json'), encrypted);
+    writeFileSync(join(snapshotPath, '_credentials.enc.json'), encrypted, { mode: 0o600 });
     credentialsIncluded = true;
   }
 

@@ -130,7 +130,7 @@ export async function pushToGit(
   // 3. Commit — use a standard message format
   const timestamp = new Date().toISOString();
   const snapshotId = snapshotPath.split('/').pop() ?? 'unknown';
-  const message = `chore: flowsave backup snapshot-${snapshotId} ${timestamp}`;
+  const message = `chore: flowsave backup ${timestamp} snapshot-${snapshotId}`;
 
   // Check if there is anything to commit
   const status = spawnSync('git', ['status', '--porcelain'], {

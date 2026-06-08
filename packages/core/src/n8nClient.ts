@@ -128,7 +128,7 @@ export class N8nClient {
       return undefined as unknown as T;
     }
 
-    return response.json() as Promise<T>;
+    return response.json() as unknown as Promise<T>;
   }
 
   /**
