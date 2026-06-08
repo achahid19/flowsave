@@ -17,6 +17,11 @@ CLAUDE.md
 DECISIONS.md
 PHASES.md
 flowsave-product-spec.md
+memory/
+packages/core/CLAUDE.md
+packages/cli/CLAUDE.md
+packages/agent/CLAUDE.md
+apps/dashboard/CLAUDE.md
 
 # OS
 .DS_Store
