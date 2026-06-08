@@ -12,6 +12,11 @@ dist/
 .env.local
 .env.*.local
 
+# Claude Code internal files
+CLAUDE.md
+DECISIONS.md
+PHASES.md
+
 # OS
 .DS_Store
 Thumbs.db
