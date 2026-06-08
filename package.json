@@ -3,9 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "description": "Backup, restore, and migrate n8n workflows — CLI, agent, and SaaS dashboard",
+  "packageManager": "pnpm@10.34.1",
   "engines": {
     "node": ">=18",
     "pnpm": ">=10"
+  },
+  "pnpm": {
+    "overrides": {
+      "vite": ">=6.4.2",
+      "esbuild": ">=0.25.0"
+    }
   },
   "scripts": {
     "build": "turbo run build",
@@ -15,6 +22,10 @@
     "phase:done": "node scripts/phase-gate.mjs"
   },
   "devDependencies": {
-    "turbo": "^2.0.0"
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0"
   }
 }
