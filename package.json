@@ -1,0 +1,20 @@
+{
+  "name": "flowsave",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Backup, restore, and migrate n8n workflows — CLI, agent, and SaaS dashboard",
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "audit:all": "pnpm audit --recursive",
+    "phase:done": "node scripts/phase-gate.mjs"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0"
+  }
+}
