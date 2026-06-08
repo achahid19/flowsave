@@ -17,4 +17,4 @@ Flowsave is an open-source CLI, self-hosted agent, and paid SaaS dashboard for n
 
 ## License
 
-MIT
+[Elastic License 2.0 (ELv2)](LICENSE) — free to use and self-host; cannot be offered as a managed service.
