@@ -5,7 +5,7 @@
   "description": "Backup, restore, and migrate n8n workflows — CLI, agent, and SaaS dashboard",
   "engines": {
     "node": ">=18",
-    "pnpm": ">=9"
+    "pnpm": ">=10"
   },
   "scripts": {
     "build": "turbo run build",

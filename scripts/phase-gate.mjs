@@ -13,14 +13,8 @@
  * All checks must pass. Any failure blocks phase completion.
  */
 
-import { execSync } from "child_process";
-
-const CHECKS = [
-  { label: "Build (TypeScript)", cmd: "pnpm build" },
-  { label: "Tests", cmd: "pnpm test" },
-  { label: "Lint", cmd: "pnpm lint" },
-  { label: "Security audit", cmd: "pnpm audit --audit-level=high" },
-];
+import { execSync, spawnSync } from "child_process";
+import { existsSync } from "fs";
 
 const GREEN = "\x1b[32m";
 const RED = "\x1b[31m";
@@ -28,30 +22,54 @@ const YELLOW = "\x1b[33m";
 const BOLD = "\x1b[1m";
 const RESET = "\x1b[0m";
 
+function run(cmd) {
+  try {
+    execSync(cmd, { stdio: "pipe" });
+    return { passed: true, output: "" };
+  } catch (err) {
+    const output = err.stdout?.toString() || err.stderr?.toString() || "";
+    return { passed: false, output };
+  }
+}
+
 console.log(`\n${BOLD}Flowsave Phase Gate${RESET}`);
 console.log("Running all checks — every one must pass before marking phase done.\n");
+
+// Sanity check — ensure deps are installed
+if (!existsSync("node_modules")) {
+  console.log(`${RED}✗ node_modules not found. Run pnpm install first.${RESET}\n`);
+  process.exit(1);
+}
+
+const CHECKS = [
+  { label: "Build (TypeScript)", cmd: "pnpm build" },
+  { label: "Tests", cmd: "pnpm test" },
+  { label: "Lint", cmd: "pnpm lint" },
+  { label: "Security audit", cmd: "pnpm audit --audit-level=high --recursive" },
+];
 
 const results = [];
 
 for (const check of CHECKS) {
   process.stdout.write(`  ${YELLOW}→${RESET} ${check.label} ... `);
-  try {
-    execSync(check.cmd, { stdio: "pipe" });
+  const { passed, output } = run(check.cmd);
+
+  if (passed) {
     console.log(`${GREEN}✓ passed${RESET}`);
-    results.push({ ...check, passed: true });
-  } catch (err) {
+  } else {
     console.log(`${RED}✗ failed${RESET}`);
-    const output = err.stdout?.toString() || err.stderr?.toString() || "";
     if (output) {
       console.log(
         output
           .split("\n")
+          .slice(0, 30) // cap output — don't flood the terminal
           .map((l) => `      ${l}`)
           .join("\n")
       );
     }
-    results.push({ ...check, passed: false });
   }
+
+  results.push({ ...check, passed });
 }
 
 const passed = results.filter((r) => r.passed).length;
