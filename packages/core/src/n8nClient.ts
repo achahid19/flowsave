@@ -245,15 +245,30 @@ export class N8nClient {
    * Replace the full tag set on a workflow.
    * Tags are not accepted on create or update — must be set via this endpoint.
    * On cross-instance restore, tag IDs differ, so callers should skip this.
+   *
+   * The endpoint accepts an array of `{ id }` only — any extra field (e.g. name)
+   * triggers a 422 "must NOT have additional properties", so we send IDs alone.
    */
   async updateWorkflowTags(
     id: string,
-    tags: Array<{ id: string; name: string }>
+    tags: Array<{ id: string; name?: string }>
   ): Promise<void> {
+    const payload = tags.map((t) => ({ id: t.id }));
     await this.request<unknown>(
       'PUT',
       `/api/v1/workflows/${encodeURIComponent(id)}/tags`,
-      tags
+      payload
+    );
+  }
+
+  /**
+   * Deactivate a workflow.
+   * Used on same-instance restore to match a snapshot that had the workflow inactive.
+   */
+  async deactivateWorkflow(id: string): Promise<void> {
+    await this.request<unknown>(
+      'POST',
+      `/api/v1/workflows/${encodeURIComponent(id)}/deactivate`
     );
   }
 

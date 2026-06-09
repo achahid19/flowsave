@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   createWorkflow: vi.fn(),
   createFolder: vi.fn(),
   activateWorkflow: vi.fn(),
+  deactivateWorkflow: vi.fn(),
   updateWorkflowTags: vi.fn(),
   importCredentials: vi.fn(),
   getFlowsaveHome: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock('../n8nClient', () => {
     createWorkflow = mocks.createWorkflow;
     createFolder = mocks.createFolder;
     activateWorkflow = mocks.activateWorkflow;
+    deactivateWorkflow = mocks.deactivateWorkflow;
     updateWorkflowTags = mocks.updateWorkflowTags;
   }
 
@@ -76,7 +78,12 @@ function writeSnapshot(
   homeDir: string,
   backupDir: string,
   snapshotId: number,
-  workflows: { name: string; folder?: string }[],
+  workflows: {
+    name: string;
+    folder?: string;
+    active?: boolean;
+    tags?: Array<{ id: string; name: string }>;
+  }[],
   includeCreds = false
 ): void {
   writeFileSync(
@@ -102,7 +109,14 @@ function writeSnapshot(
     mkdirSync(dir, { recursive: true });
     writeFileSync(
       join(dir, `${wf.name}.json`),
-      JSON.stringify({ id: `wf-${wf.name}`, name: wf.name, active: true, nodes: [], connections: {} })
+      JSON.stringify({
+        id: `wf-${wf.name}`,
+        name: wf.name,
+        active: wf.active ?? true,
+        nodes: [],
+        connections: {},
+        ...(wf.tags !== undefined && { tags: wf.tags }),
+      })
     );
   }
 
@@ -139,6 +153,7 @@ describe('restore', () => {
     mocks.createWorkflow.mockResolvedValue({ id: 'wf-new', name: 'Test', active: false, nodes: [], connections: {} });
     mocks.createFolder.mockResolvedValue({ id: 'folder-new', name: 'DevOps', parentFolderId: null });
     mocks.activateWorkflow.mockResolvedValue(undefined);
+    mocks.deactivateWorkflow.mockResolvedValue(undefined);
     mocks.updateWorkflowTags.mockResolvedValue(undefined);
     mocks.importCredentials.mockResolvedValue(undefined);
   });
@@ -242,58 +257,83 @@ describe('restore', () => {
     expect(result.workflows[0].name).toBe('Test Workflow');
   });
 
-  it('activates workflow after restore when original was active', async () => {
+  // -------------------------------------------------------------------------
+  // Active-state fidelity — only flip when current state differs from snapshot
+  // -------------------------------------------------------------------------
+
+  it('activates when snapshot was active but target is currently inactive', async () => {
+    mocks.updateWorkflow.mockResolvedValue({ id: 'wf-1', name: 'X', active: false, nodes: [], connections: {} });
     const config = { ...baseConfig, backupDir };
-    writeSnapshot(homeDir, backupDir, 1, [{ name: 'Active Workflow' }]); // active: true in fixture
+    writeSnapshot(homeDir, backupDir, 1, [{ name: 'Wf', active: true }]);
 
     await restore({ snapshotId: 1, config });
 
-    expect(mocks.activateWorkflow).toHaveBeenCalledOnce();
     expect(mocks.activateWorkflow).toHaveBeenCalledWith('wf-1');
+    expect(mocks.deactivateWorkflow).not.toHaveBeenCalled();
   });
 
-  it('does not call activateWorkflow when original workflow was inactive', async () => {
+  it('does not activate when target is already active (no redundant call)', async () => {
+    mocks.updateWorkflow.mockResolvedValue({ id: 'wf-1', name: 'X', active: true, nodes: [], connections: {} });
     const config = { ...baseConfig, backupDir };
-    const snapshotPath = join(backupDir, '1');
-    mkdirSync(snapshotPath, { recursive: true });
-    writeFileSync(
-      join(homeDir, 'index.json'),
-      JSON.stringify([{ id: 1, timestamp: '', instanceUrl: 'http://localhost:5678', sizeBytes: 0 }])
-    );
-    const { SnapshotMeta: _unused, ...rest } = {} as { SnapshotMeta: unknown };
-    void _unused; void rest;
-    writeFileSync(join(snapshotPath, 'meta.json'), JSON.stringify({
-      snapshotId: 1, instanceUrl: 'http://localhost:5678', n8nVersion: '1.0.0',
-      timestamp: new Date().toISOString(), workflowCount: 1, credentialsIncluded: false,
-    }));
-    writeFileSync(
-      join(snapshotPath, 'Inactive.json'),
-      JSON.stringify({ id: 'wf-inactive', name: 'Inactive', active: false, nodes: [], connections: {} })
-    );
+    writeSnapshot(homeDir, backupDir, 1, [{ name: 'Wf', active: true }]);
 
     await restore({ snapshotId: 1, config });
 
     expect(mocks.activateWorkflow).not.toHaveBeenCalled();
+    expect(mocks.deactivateWorkflow).not.toHaveBeenCalled();
   });
 
-  it('does not restore tags in forceCreate mode (cross-instance)', async () => {
+  it('deactivates when snapshot was inactive but target is currently active', async () => {
+    mocks.updateWorkflow.mockResolvedValue({ id: 'wf-1', name: 'X', active: true, nodes: [], connections: {} });
     const config = { ...baseConfig, backupDir };
-    // Write a workflow fixture with tags
-    const snapshotPath = join(backupDir, '1');
-    mkdirSync(snapshotPath, { recursive: true });
-    writeFileSync(
-      join(homeDir, 'index.json'),
-      JSON.stringify([{ id: 1, timestamp: '', instanceUrl: 'http://localhost:5678', sizeBytes: 0 }])
-    );
-    writeFileSync(join(snapshotPath, 'meta.json'), JSON.stringify({
-      snapshotId: 1, instanceUrl: 'http://localhost:5678', n8nVersion: '1.0.0',
-      timestamp: new Date().toISOString(), workflowCount: 1, credentialsIncluded: false,
-    }));
-    writeFileSync(
-      join(snapshotPath, 'Tagged.json'),
-      JSON.stringify({ id: 'wf-tagged', name: 'Tagged', active: false, nodes: [], connections: {},
-        tags: [{ id: 'tag1', name: 'prod' }] })
-    );
+    writeSnapshot(homeDir, backupDir, 1, [{ name: 'Wf', active: false }]);
+
+    await restore({ snapshotId: 1, config });
+
+    expect(mocks.deactivateWorkflow).toHaveBeenCalledWith('wf-1');
+    expect(mocks.activateWorkflow).not.toHaveBeenCalled();
+  });
+
+  it('never deactivates in forceCreate mode (fresh workflows start inactive)', async () => {
+    const config = { ...baseConfig, backupDir };
+    writeSnapshot(homeDir, backupDir, 1, [{ name: 'Wf', active: false }]);
+
+    await restore({ snapshotId: 1, config, forceCreate: true });
+
+    expect(mocks.deactivateWorkflow).not.toHaveBeenCalled();
+    expect(mocks.activateWorkflow).not.toHaveBeenCalled();
+  });
+
+  it('activates a freshly-created workflow in forceCreate mode when snapshot was active', async () => {
+    // createWorkflow mock returns active:false (n8n creates workflows inactive)
+    const config = { ...baseConfig, backupDir };
+    writeSnapshot(homeDir, backupDir, 1, [{ name: 'Wf', active: true }]);
+
+    await restore({ snapshotId: 1, config, forceCreate: true });
+
+    expect(mocks.activateWorkflow).toHaveBeenCalledWith('wf-new');
+  });
+
+  // -------------------------------------------------------------------------
+  // Tag fidelity
+  // -------------------------------------------------------------------------
+
+  it('restores tags on same-instance restore', async () => {
+    const config = { ...baseConfig, backupDir };
+    writeSnapshot(homeDir, backupDir, 1, [
+      { name: 'Tagged', tags: [{ id: 'tag1', name: 'prod' }] },
+    ]);
+
+    await restore({ snapshotId: 1, config });
+
+    expect(mocks.updateWorkflowTags).toHaveBeenCalledWith('wf-1', [{ id: 'tag1', name: 'prod' }]);
+  });
+
+  it('does not restore tags in forceCreate mode (tag IDs differ across instances)', async () => {
+    const config = { ...baseConfig, backupDir };
+    writeSnapshot(homeDir, backupDir, 1, [
+      { name: 'Tagged', tags: [{ id: 'tag1', name: 'prod' }] },
+    ]);
 
     await restore({ snapshotId: 1, config, forceCreate: true });
 

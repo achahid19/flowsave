@@ -230,19 +230,37 @@ describe('N8nClient', () => {
     });
   });
 
+  describe('deactivateWorkflow', () => {
+    it('sends POST to /deactivate endpoint', async () => {
+      mockFetch.mockResolvedValue(
+        makeOkResponse({ id: 'wf-1', active: false, name: 'T', nodes: [], connections: {} })
+      );
+      await client.deactivateWorkflow('wf-1');
+      expect(getLastCallMethod()).toBe('POST');
+      expect(getLastCallUrl()).toBe('http://n8n:5678/api/v1/workflows/wf-1/deactivate');
+    });
+  });
+
   // -------------------------------------------------------------------------
   // updateWorkflowTags — H4
   // -------------------------------------------------------------------------
 
   describe('updateWorkflowTags', () => {
-    it('sends PUT to /tags endpoint with the tag array as the body', async () => {
+    it('sends PUT to /tags endpoint', async () => {
       mockFetch.mockResolvedValue(makeOkResponse([{ id: 'tag1', name: 'important' }]));
       await client.updateWorkflowTags('wf-1', [{ id: 'tag1', name: 'important' }]);
       expect(getLastCallMethod()).toBe('PUT');
       expect(getLastCallUrl()).toBe('http://n8n:5678/api/v1/workflows/wf-1/tags');
+    });
+
+    it('strips name from each tag — sends id-only objects (422 guard)', async () => {
+      mockFetch.mockResolvedValue(makeOkResponse([{ id: 'tag1', name: 'important' }]));
+      await client.updateWorkflowTags('wf-1', [
+        { id: 'tag1', name: 'important' },
+        { id: 'tag2', name: 'prod' },
+      ]);
       const body = JSON.parse((mockFetch.mock.calls[0][1] as RequestInit).body as string) as unknown[];
-      expect(Array.isArray(body)).toBe(true);
-      expect(body[0]).toMatchObject({ id: 'tag1', name: 'important' });
+      expect(body).toEqual([{ id: 'tag1' }, { id: 'tag2' }]);
     });
   });
 

@@ -284,36 +284,45 @@ export async function restore(options: RestoreOptions): Promise<Snapshot> {
       parentFolderId: targetFolderId,
     };
 
-    // Update or create, capturing the resulting workflow ID for post-restore steps.
+    // Update or create, capturing the resulting workflow for post-restore steps.
     // updateWorkflow uses PUT (full replacement) with a whitelisted payload.
     // createWorkflow also uses a whitelisted payload — no extra fields.
-    const resultId = await (async (): Promise<string> => {
+    // Neither endpoint changes active state, so result.active reflects the
+    // workflow's CURRENT state on the target (false for newly-created workflows).
+    const result = await (async (): Promise<N8nWorkflow> => {
       if (forceCreate) {
-        const created = await client.createWorkflow(payload);
-        return created.id;
+        return client.createWorkflow(payload);
       }
       // Same-instance restore: update by ID, fall back to create on 404
       try {
-        const updated = await client.updateWorkflow(wf.id, payload);
-        return updated.id;
+        return await client.updateWorkflow(wf.id, payload);
       } catch (err) {
         if (err instanceof N8nApiError && err.statusCode === 404) {
-          const created = await client.createWorkflow(payload);
-          return created.id;
+          return client.createWorkflow(payload);
         }
         throw err;
       }
     })();
 
-    // Activate if the original workflow was active.
-    // New workflows always start inactive; same-instance update preserves current state,
-    // but we enforce the backed-up active state explicitly for full fidelity.
-    if (wf.data.active) {
+    // Enforce the backed-up active state for full fidelity — but only call the
+    // API when the current state actually differs, to avoid redundant requests
+    // and noisy "already (in)active" warnings.
+    const desiredActive = wf.data.active === true;
+    const currentActive = result.active === true;
+    if (desiredActive && !currentActive) {
       try {
-        await client.activateWorkflow(resultId);
+        await client.activateWorkflow(result.id);
       } catch {
         process.stderr.write(
-          `[flowsave] Warning: could not activate workflow "${wf.name}" (id: ${resultId}).\n`
+          `[flowsave] Warning: could not activate workflow "${wf.name}" (id: ${result.id}).\n`
+        );
+      }
+    } else if (!desiredActive && currentActive) {
+      try {
+        await client.deactivateWorkflow(result.id);
+      } catch {
+        process.stderr.write(
+          `[flowsave] Warning: could not deactivate workflow "${wf.name}" (id: ${result.id}).\n`
         );
       }
     }
@@ -322,7 +331,7 @@ export async function restore(options: RestoreOptions): Promise<Snapshot> {
     // Cross-instance (forceCreate): tag IDs differ across instances — skip with a warning.
     if (!forceCreate && wf.data.tags && wf.data.tags.length > 0) {
       try {
-        await client.updateWorkflowTags(resultId, wf.data.tags);
+        await client.updateWorkflowTags(result.id, wf.data.tags);
       } catch {
         process.stderr.write(
           `[flowsave] Warning: could not restore tags for workflow "${wf.name}".\n`
