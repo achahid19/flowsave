@@ -152,6 +152,50 @@ flowsave config set backupDir /mnt/backups
 
 ---
 
+### `flowsave delete <id>`
+
+Permanently delete a single snapshot from disk and from the local index.
+
+```bash
+flowsave delete 3          # prompts for confirmation
+flowsave delete 3 --yes    # skip confirmation
+```
+
+| Flag | Description |
+|------|-------------|
+| `-y, --yes` | Skip the confirmation prompt |
+
+---
+
+### `flowsave prune`
+
+Scan all local snapshots and remove any whose workflow content is identical to a newer snapshot. Keeps the most recent copy of each distinct state.
+
+```bash
+flowsave prune             # preview + prompt
+flowsave prune --dry-run   # show what would be removed, don't delete
+flowsave prune --yes       # skip confirmation
+```
+
+The command always shows a preview table before deleting:
+
+```
+  Found 2 redundant snapshots:
+  ────────────────────────────────────────────────────
+  #1    2026-06-09 08:00     1.2 KB      ≡ #3
+  #2    2026-06-09 09:00     1.2 KB      ≡ #3
+  ────────────────────────────────────────────────────
+  Space freed               2.4 KB
+  Snapshots kept            1
+```
+
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Show candidates without deleting anything |
+| `-y, --yes` | Skip the confirmation prompt |
+
+---
+
 ### `flowsave doctor`
 
 Diagnose your setup. Checks config, n8n reachability, Docker container, and backup directory.
