@@ -35,6 +35,14 @@ registerList(program);
 registerConfig(program);
 registerDoctor(program);
 
+program.addHelpText('after', `
+Config subcommands:
+  flowsave config init              Interactive setup wizard
+  flowsave config show              Print current config (API key masked)
+  flowsave config set <key> <val>   Update one field without re-running init
+
+Run 'flowsave <command> --help' for detailed options and flags.`);
+
 program.parseAsync(process.argv).catch((err: unknown) => {
   const message = err instanceof Error ? err.message : String(err);
   process.stderr.write(`Error: ${message}\n`);
