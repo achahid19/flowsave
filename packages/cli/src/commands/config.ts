@@ -22,7 +22,7 @@ import {
 export function register(program: Command): void {
   const configCmd = program
     .command('config')
-    .description('Manage Flowsave configuration  (run "flowsave config --help" for subcommands)');
+    .description('Manage Flowsave configuration');
 
   // -------------------------------------------------------------------------
   // config show
