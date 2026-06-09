@@ -41,15 +41,34 @@ interface PaginatedResponse<T> {
   nextCursor: string | null;
 }
 
+/**
+ * Fields the n8n public API accepts on POST /api/v1/workflows.
+ * `active` and `tags` are NOT accepted here — they have dedicated endpoints:
+ *   - POST /api/v1/workflows/{id}/activate
+ *   - PUT  /api/v1/workflows/{id}/tags
+ * Including extra fields causes "must NOT have additional properties" 422 errors.
+ */
 interface WorkflowCreatePayload {
   name: string;
   nodes: unknown[];
   connections: Record<string, unknown>;
   settings?: Record<string, unknown>;
   staticData?: unknown;
-  tags?: Array<{ id: string; name: string }>;
   parentFolderId?: string | null;
   projectId?: string;
+}
+
+/**
+ * Fields the n8n public API accepts on PUT /api/v1/workflows/{id}.
+ * Same whitelist as create — no id, no active, no tags, no parentFolderId.
+ * (Folder reassignment via PUT is not supported; use a dedicated move endpoint if added.)
+ */
+interface WorkflowUpdatePayload {
+  name: string;
+  nodes: unknown[];
+  connections: Record<string, unknown>;
+  settings?: Record<string, unknown>;
+  staticData?: unknown;
 }
 
 interface FolderCreatePayload {
@@ -175,13 +194,14 @@ export class N8nClient {
     data: Omit<N8nWorkflow, 'id'>,
     projectId?: string
   ): Promise<N8nWorkflow> {
+    // Whitelist only the fields n8n accepts — extra fields cause 422 validation errors.
+    // `active` and `tags` are set separately after creation via dedicated endpoints.
     const payload: WorkflowCreatePayload = {
       name: data.name,
       nodes: data.nodes,
       connections: data.connections,
       ...(data.settings !== undefined && { settings: data.settings }),
       ...(data.staticData !== undefined && { staticData: data.staticData }),
-      ...(data.tags !== undefined && { tags: data.tags }),
       ...(data.parentFolderId !== undefined && { parentFolderId: data.parentFolderId }),
       ...(projectId !== undefined && { projectId }),
     };
@@ -189,14 +209,51 @@ export class N8nClient {
   }
 
   /**
-   * Update an existing workflow by ID.
-   * Uses PATCH — only sends the fields provided.
+   * Replace an existing workflow by ID (full update).
+   *
+   * Uses PUT (full replacement) — n8n public API does not support PATCH.
+   * Only whitelisted fields are sent; extra fields cause 422 validation errors.
+   * `active` state and `tags` are managed via their dedicated endpoints.
    */
-  async updateWorkflow(id: string, data: Partial<N8nWorkflow>): Promise<N8nWorkflow> {
+  async updateWorkflow(id: string, data: Omit<N8nWorkflow, 'id'>): Promise<N8nWorkflow> {
+    const payload: WorkflowUpdatePayload = {
+      name: data.name,
+      nodes: data.nodes,
+      connections: data.connections,
+      ...(data.settings !== undefined && { settings: data.settings }),
+      ...(data.staticData !== undefined && { staticData: data.staticData }),
+    };
     return this.request<N8nWorkflow>(
-      'PATCH',
+      'PUT',
       `/api/v1/workflows/${encodeURIComponent(id)}`,
-      data
+      payload
+    );
+  }
+
+  /**
+   * Activate a workflow.
+   * Must be called explicitly after create/restore — workflows start inactive.
+   */
+  async activateWorkflow(id: string): Promise<void> {
+    await this.request<unknown>(
+      'POST',
+      `/api/v1/workflows/${encodeURIComponent(id)}/activate`
+    );
+  }
+
+  /**
+   * Replace the full tag set on a workflow.
+   * Tags are not accepted on create or update — must be set via this endpoint.
+   * On cross-instance restore, tag IDs differ, so callers should skip this.
+   */
+  async updateWorkflowTags(
+    id: string,
+    tags: Array<{ id: string; name: string }>
+  ): Promise<void> {
+    await this.request<unknown>(
+      'PUT',
+      `/api/v1/workflows/${encodeURIComponent(id)}/tags`,
+      tags
     );
   }
 

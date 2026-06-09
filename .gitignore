@@ -35,8 +35,8 @@ Thumbs.db
 coverage/
 *.lcov
 
-# Flowsave runtime data (never commit user data)
-~/.flowsave/
+# Flowsave runtime data lives at ~/.flowsave/ on the user's machine — outside the repo,
+# so no .gitignore pattern is needed. The path is never relative to this directory.
 
 # Logs
 *.log

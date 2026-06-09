@@ -48,6 +48,13 @@ export interface N8nWorkflow {
   tags?: Array<{ id: string; name: string }>;
   /** Folder this workflow belongs to. Null = root level. */
   parentFolderId?: string | null;
+  /**
+   * Project this workflow belongs to (returned by n8n API on GET).
+   * Not sent on create/update — use the projectId param on createWorkflow instead.
+   * Cross-instance migration does NOT re-create projects; workflows land in the
+   * default personal project. Full project placement is Phase 5 scope.
+   */
+  project?: { id: string; name: string; type: string };
   createdAt?: string;
   updatedAt?: string;
 }

@@ -18,7 +18,7 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
-    "audit:all": "pnpm audit --recursive",
+    "audit:all": "pnpm audit --audit-level=high",
     "phase:done": "node scripts/phase-gate.mjs"
   },
   "devDependencies": {

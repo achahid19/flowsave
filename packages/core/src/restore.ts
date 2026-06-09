@@ -22,7 +22,7 @@ import {
 } from 'fs';
 import { join, relative, sep } from 'path';
 import { importCredentials } from './credentials';
-import { getFlowsaveHome } from './config';
+import { getIndexPath } from './config';
 import { N8nClient, N8nApiError } from './n8nClient';
 import type {
   FlowsaveConfig,
@@ -86,7 +86,7 @@ export interface RestoreOptions {
  * Read the snapshot index and find the entry for a given ID.
  */
 function findSnapshotEntry(snapshotId: number): SnapshotIndexEntry {
-  const indexPath = join(getFlowsaveHome(), 'index.json');
+  const indexPath = getIndexPath();
   if (!existsSync(indexPath)) {
     throw new RestoreError(`No snapshots found. Run "flowsave backup" first.`);
   }
@@ -284,22 +284,51 @@ export async function restore(options: RestoreOptions): Promise<Snapshot> {
       parentFolderId: targetFolderId,
     };
 
-    if (!forceCreate) {
-      // Same-instance restore: try to update by ID first
+    // Update or create, capturing the resulting workflow ID for post-restore steps.
+    // updateWorkflow uses PUT (full replacement) with a whitelisted payload.
+    // createWorkflow also uses a whitelisted payload — no extra fields.
+    const resultId = await (async (): Promise<string> => {
+      if (forceCreate) {
+        const created = await client.createWorkflow(payload);
+        return created.id;
+      }
+      // Same-instance restore: update by ID, fall back to create on 404
       try {
-        await client.updateWorkflow(wf.id, payload);
-        continue;
+        const updated = await client.updateWorkflow(wf.id, payload);
+        return updated.id;
       } catch (err) {
         if (err instanceof N8nApiError && err.statusCode === 404) {
-          // Workflow doesn't exist on target — create it
-        } else {
-          throw err;
+          const created = await client.createWorkflow(payload);
+          return created.id;
         }
+        throw err;
+      }
+    })();
+
+    // Activate if the original workflow was active.
+    // New workflows always start inactive; same-instance update preserves current state,
+    // but we enforce the backed-up active state explicitly for full fidelity.
+    if (wf.data.active) {
+      try {
+        await client.activateWorkflow(resultId);
+      } catch {
+        process.stderr.write(
+          `[flowsave] Warning: could not activate workflow "${wf.name}" (id: ${resultId}).\n`
+        );
       }
     }
 
-    // Create new workflow (either forceCreate=true or not found by ID)
-    await client.createWorkflow(payload);
+    // Restore tags on same-instance restore only.
+    // Cross-instance (forceCreate): tag IDs differ across instances — skip with a warning.
+    if (!forceCreate && wf.data.tags && wf.data.tags.length > 0) {
+      try {
+        await client.updateWorkflowTags(resultId, wf.data.tags);
+      } catch {
+        process.stderr.write(
+          `[flowsave] Warning: could not restore tags for workflow "${wf.name}".\n`
+        );
+      }
+    }
   }
 
   // 6. Restore credentials if present

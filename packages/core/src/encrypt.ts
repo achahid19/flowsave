@@ -7,7 +7,7 @@
  * Security guarantees:
  * - A random 32-byte salt is generated per encryption operation
  * - A random 12-byte IV is generated per encryption operation (GCM recommendation)
- * - Key derivation uses scrypt (cost N=32768, r=8, p=1) — resistant to brute force
+ * - Key derivation uses scrypt (cost N=16384, r=8, p=1) — resistant to brute force
  * - The 16-byte GCM auth tag is stored and verified on decrypt (integrity check)
  * - The passphrase never leaves this module and is never stored or logged
  *

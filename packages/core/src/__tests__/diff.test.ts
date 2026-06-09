@@ -12,7 +12,13 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../config', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../config')>();
-  return { ...actual, getFlowsaveHome: mocks.getFlowsaveHome };
+  return {
+    ...actual,
+    getFlowsaveHome: mocks.getFlowsaveHome,
+    // getIndexPath must be mocked too: it calls getFlowsaveHome() internally (same-module
+    // scope), so the export-level mock above doesn't affect it.
+    getIndexPath: () => join(mocks.getFlowsaveHome(), 'index.json'),
+  };
 });
 
 import { diff, DiffError } from '../diff';

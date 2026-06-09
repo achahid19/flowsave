@@ -15,7 +15,7 @@ import {
 } from 'fs';
 import { join, resolve } from 'path';
 import { exportCredentials } from './credentials';
-import { getFlowsaveHome } from './config';
+import { getFlowsaveHome, getIndexPath } from './config';
 import { N8nClient } from './n8nClient';
 import type {
   FlowsaveConfig,
@@ -139,6 +139,18 @@ function nextSnapshotId(entries: SnapshotIndexEntry[]): number {
 }
 
 // ---------------------------------------------------------------------------
+// Public helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Return all entries from the local snapshot registry (~/.flowsave/index.json).
+ * Used by `flowsave list` in the CLI. Returns an empty array if no backups exist yet.
+ */
+export function listSnapshots(): SnapshotIndexEntry[] {
+  return readIndex(getIndexPath());
+}
+
+// ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
 
@@ -157,7 +169,7 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
   mkdirSync(backupDir, { recursive: true });
 
   // 2. Determine next snapshot ID
-  const indexPath = join(getFlowsaveHome(), 'index.json');
+  const indexPath = getIndexPath();
   const existingIndex = readIndex(indexPath);
   const snapshotId = nextSnapshotId(existingIndex);
   const snapshotPath = join(backupDir, String(snapshotId));

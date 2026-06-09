@@ -13,7 +13,7 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative, sep } from 'path';
-import { getFlowsaveHome } from './config';
+import { getIndexPath } from './config';
 import type {
   DiffResult,
   FieldChange,
@@ -40,7 +40,7 @@ export class DiffError extends Error {
 // ---------------------------------------------------------------------------
 
 function readIndex(): SnapshotIndexEntry[] {
-  const indexPath = join(getFlowsaveHome(), 'index.json');
+  const indexPath = getIndexPath();
   if (!existsSync(indexPath)) return [];
   try {
     return JSON.parse(readFileSync(indexPath, 'utf-8')) as SnapshotIndexEntry[];
