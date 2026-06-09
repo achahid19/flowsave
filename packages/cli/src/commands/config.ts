@@ -11,6 +11,7 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import type { Command } from 'commander';
 import {
+  readConfig,
   writeConfig,
   validateConfig,
   getConfigPath,
@@ -23,6 +24,64 @@ export function register(program: Command): void {
     .command('config')
     .description('Manage Flowsave configuration');
 
+  // -------------------------------------------------------------------------
+  // config show
+  // -------------------------------------------------------------------------
+  configCmd
+    .command('show')
+    .description('Print the current configuration (API key masked)')
+    .action(() => {
+      try {
+        const config = readConfig();
+        const masked = {
+          ...config,
+          apiKey: config.apiKey.slice(0, 8) + '••••••••' + config.apiKey.slice(-4),
+        };
+        console.log(chalk.bold('\nFlowsave Configuration'));
+        console.log(chalk.gray('─'.repeat(40)));
+        for (const [key, value] of Object.entries(masked)) {
+          if (value !== undefined) {
+            console.log(`  ${chalk.cyan(key.padEnd(16))} ${String(value)}`);
+          }
+        }
+        console.log(chalk.gray(`\n  Config file: ${getConfigPath()}`));
+      } catch (err) {
+        const message = err instanceof ConfigValidationError
+          ? err.message
+          : 'No config found. Run "flowsave config init" to create one.';
+        console.error(chalk.red(`✗ ${message}`));
+        process.exit(1);
+      }
+    });
+
+  // -------------------------------------------------------------------------
+  // config set
+  // -------------------------------------------------------------------------
+  configCmd
+    .command('set <key> <value>')
+    .description('Update a single config field (e.g. flowsave config set gitBranch dev)')
+    .action((key: string, value: string) => {
+      const allowed = ['instanceUrl', 'apiKey', 'containerName', 'backupDir', 'gitRemote', 'gitBranch', 'dashboardToken'];
+      if (!allowed.includes(key)) {
+        console.error(chalk.red(`✗ Unknown config key: "${key}"`));
+        console.error(chalk.gray(`  Valid keys: ${allowed.join(', ')}`));
+        process.exit(1);
+      }
+      try {
+        const config = readConfig();
+        const updated = validateConfig({ ...config, [key]: value || undefined });
+        writeConfig(updated);
+        console.log(chalk.green(`✓ ${key} updated`));
+      } catch (err) {
+        const message = err instanceof ConfigValidationError ? err.message : String(err);
+        console.error(chalk.red(`✗ ${message}`));
+        process.exit(1);
+      }
+    });
+
+  // -------------------------------------------------------------------------
+  // config init
+  // -------------------------------------------------------------------------
   configCmd
     .command('init')
     .description('Create or update the Flowsave configuration interactively')
@@ -80,7 +139,6 @@ export function register(program: Command): void {
           type: 'input',
           name: 'containerName',
           message: 'Docker container name (leave blank to skip credential backup):',
-          default: 'n8n',
         },
         {
           type: 'input',

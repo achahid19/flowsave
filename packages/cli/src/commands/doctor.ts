@@ -71,7 +71,7 @@ function checkDocker(containerName: string): CheckResult {
   try {
     const output = execSync(
       `docker ps --filter "name=^/${containerName}$" --format "{{.Names}}"`,
-      { encoding: 'utf-8', timeout: 5000 }
+      { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] }
     ).trim();
 
     if (output === containerName) {

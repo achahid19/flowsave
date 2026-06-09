@@ -46,7 +46,7 @@ export interface N8nWorkflow {
   settings?: Record<string, unknown>;
   staticData?: unknown;
   tags?: Array<{ id: string; name: string }>;
-  /** Folder this workflow belongs to. Null = root level. */
+  /** Folder this workflow belongs to. Null = root level. Available on n8n v2.14+. */
   parentFolderId?: string | null;
   /**
    * Project this workflow belongs to (returned by n8n API on GET).
@@ -55,13 +55,25 @@ export interface N8nWorkflow {
    * default personal project. Full project placement is Phase 5 scope.
    */
   project?: { id: string; name: string; type: string };
+  /**
+   * Project sharing info returned by GET /api/v1/workflows.
+   * shared[0].projectId is the canonical way to get the project ID for a workflow,
+   * used when calling GET /api/v1/projects/{projectId}/folders.
+   */
+  shared?: Array<{
+    role: string;
+    workflowId: string;
+    projectId: string;
+    project?: { id: string; name: string; type: string };
+  }>;
   createdAt?: string;
   updatedAt?: string;
 }
 
 /**
- * n8n folder as returned by the public REST API (GET /api/v1/folders).
- * Used for building the folder hierarchy during backup.
+ * n8n folder as returned by the public REST API.
+ * Endpoint: GET /api/v1/projects/{projectId}/folders
+ * Available from n8n v2.14.0. Returns null from getFolders() on older versions.
  */
 export interface N8nFolder {
   id: string;
@@ -111,6 +123,15 @@ export interface SnapshotMeta {
   workflowCount: number;
   /** True if _credentials.enc.json is present in this snapshot. */
   credentialsIncluded: boolean;
+  /**
+   * True if folder hierarchy was successfully fetched and used to place workflow
+   * files in subdirectories. False when the API is unavailable (requires n8n
+   * Enterprise license — GET /api/v1/projects/{id}/folders is gated).
+   * Undefined on snapshots created before this field was added.
+   */
+  folderStructureIncluded?: boolean;
+  /** Total size of all files in this snapshot directory, in bytes. */
+  sizeBytes?: number;
 }
 
 /**

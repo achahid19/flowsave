@@ -282,17 +282,38 @@ export class N8nClient {
   // -------------------------------------------------------------------------
 
   /**
-   * List all folders via the public API.
-   * Returns an empty array (with a warning) if the endpoint is not available
-   * on older n8n instances — callers must handle the flat fallback.
+   * List all folders for a given project.
+   *
+   * Correct endpoint: GET /api/v1/projects/{projectId}/folders
+   * Available from n8n v2.14.0. Returns null on older versions (404/403/405),
+   * so callers can distinguish "no folders" from "API not supported".
+   *
+   * The projectId can be extracted from workflow.shared[0].projectId.
+   * This endpoint uses skip/take pagination (not cursor-based).
    */
-  async getFolders(): Promise<N8nFolder[]> {
+  async getFolders(projectId: string): Promise<N8nFolder[] | null> {
+    const pageSize = 100;
+    const results: N8nFolder[] = [];
+    let skip = 0;
+
     try {
-      return await this.fetchAllPages<N8nFolder>('/api/v1/folders');
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const page = await this.request<{ count: number; data: N8nFolder[] }>(
+          'GET',
+          `/api/v1/projects/${encodeURIComponent(projectId)}/folders?take=${pageSize}&skip=${skip}`
+        );
+        results.push(...page.data);
+        if (results.length >= page.count || page.data.length === 0) break;
+        skip += pageSize;
+      }
+      return results;
     } catch (err) {
-      if (err instanceof N8nApiError && (err.statusCode === 404 || err.statusCode === 405)) {
-        // Older n8n version — folder list endpoint not available
-        return [];
+      if (
+        err instanceof N8nApiError &&
+        (err.statusCode === 404 || err.statusCode === 403 || err.statusCode === 405)
+      ) {
+        return null; // API not available on this n8n version
       }
       throw err;
     }

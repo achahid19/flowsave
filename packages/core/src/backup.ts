@@ -182,15 +182,24 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
 
   mkdirSync(snapshotPath, { recursive: true });
 
-  // 3. Fetch data from n8n in parallel
-  const [workflows, folders, n8nVersion] = await Promise.all([
+  // 3. Fetch workflows and version in parallel (folders need projectId from workflows first)
+  const [workflows, n8nVersion] = await Promise.all([
     client.getWorkflows(),
-    client.getFolders(),
     client.getVersion(),
   ]);
 
-  // 4. Build folder ID → path mapping
-  const folderPathMap = buildFolderPathMap(folders);
+  // 4. Resolve folder structure.
+  //    Correct endpoint: GET /api/v1/projects/{projectId}/folders (n8n v2.14+).
+  //    We extract projectId from the first workflow's shared[] field — available
+  //    on the same n8n version that exposes the folders endpoint.
+  //    folders === null means the API is unavailable on this n8n version.
+  const projectId = workflows[0]?.shared?.[0]?.projectId;
+  const folders = projectId ? await client.getFolders(projectId) : null;
+
+  // folders === null → API unavailable (community edition limitation)
+  // folders === [] → API available but no folders created yet
+  const folderStructureIncluded = folders !== null;
+  const folderPathMap = buildFolderPathMap(folders ?? []);
 
   // 5. Write workflow files in folder-aware structure
   const workflowBackups: WorkflowBackup[] = [];
@@ -247,11 +256,14 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
     timestamp,
     workflowCount: workflows.length,
     credentialsIncluded,
+    folderStructureIncluded,
   };
   writeFileSync(join(snapshotPath, 'meta.json'), JSON.stringify(meta, null, 2), 'utf-8');
 
-  // 8. Compute snapshot size
+  // 8. Compute snapshot size and write final size back into meta
   const sizeBytes = computeDirSize(snapshotPath);
+  meta.sizeBytes = sizeBytes;
+  writeFileSync(join(snapshotPath, 'meta.json'), JSON.stringify(meta, null, 2), 'utf-8');
 
   // 9. Append entry to ~/.flowsave/index.json
   const newEntry: SnapshotIndexEntry = {

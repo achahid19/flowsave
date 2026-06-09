@@ -79,6 +79,7 @@ describe('backup', () => {
         nodes: [],
         connections: {},
         parentFolderId: null,
+        shared: [{ role: 'workflow:owner', workflowId: 'wf-1', projectId: 'proj-1' }],
       },
     ]);
     mocks.getFolders.mockResolvedValue([]);
@@ -125,6 +126,9 @@ describe('backup', () => {
     expect(meta.workflowCount).toBe(1);
     expect(meta.credentialsIncluded).toBe(false);
     expect(typeof meta.timestamp).toBe('string');
+    expect(typeof meta.sizeBytes).toBe('number');
+    // Folder structure included because default mock returns [] (empty array, not null)
+    expect(meta.folderStructureIncluded).toBe(true);
   });
 
   it('writes workflow JSON file at root level when no folder', async () => {
@@ -146,6 +150,7 @@ describe('backup', () => {
         nodes: [],
         connections: {},
         parentFolderId: 'folder-1',
+        shared: [{ role: 'workflow:owner', workflowId: 'wf-2', projectId: 'proj-1' }],
       },
     ]);
 
