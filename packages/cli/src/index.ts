@@ -15,6 +15,8 @@ import { register as registerPush } from './commands/push';
 import { register as registerList } from './commands/list';
 import { register as registerConfig } from './commands/config';
 import { register as registerDoctor } from './commands/doctor';
+import { register as registerDelete } from './commands/delete';
+import { register as registerPrune } from './commands/prune';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { version } = require('../package.json') as { version: string };
@@ -34,6 +36,8 @@ registerPush(program);
 registerList(program);
 registerConfig(program);
 registerDoctor(program);
+registerDelete(program);
+registerPrune(program);
 
 program.addHelpText('after', `
 Run 'flowsave <command> --help' for detailed options and flags.`);

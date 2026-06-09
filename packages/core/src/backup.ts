@@ -10,6 +10,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from 'fs';
@@ -34,6 +35,13 @@ export class BackupError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'BackupError';
+  }
+}
+
+export class DeleteError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DeleteError';
   }
 }
 
@@ -148,6 +156,31 @@ function nextSnapshotId(entries: SnapshotIndexEntry[]): number {
  */
 export function listSnapshots(): SnapshotIndexEntry[] {
   return readIndex(getIndexPath());
+}
+
+/**
+ * Delete a single snapshot: removes its directory from disk and removes its
+ * entry from ~/.flowsave/index.json.
+ *
+ * Throws DeleteError if the ID is not in the index.
+ */
+export function deleteSnapshot(snapshotId: number, config: FlowsaveConfig): void {
+  const indexPath = getIndexPath();
+  const entries = readIndex(indexPath);
+
+  if (!entries.find((e) => e.id === snapshotId)) {
+    throw new DeleteError(
+      `Snapshot ${snapshotId} not found. Run "flowsave list" to see available snapshots.`
+    );
+  }
+
+  const snapshotPath = join(resolve(config.backupDir), String(snapshotId));
+  if (existsSync(snapshotPath)) {
+    rmSync(snapshotPath, { recursive: true, force: true });
+  }
+
+  const updated = entries.filter((e) => e.id !== snapshotId);
+  writeFileSync(indexPath, JSON.stringify(updated, null, 2), 'utf-8');
 }
 
 // ---------------------------------------------------------------------------
