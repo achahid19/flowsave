@@ -4,12 +4,174 @@
 
 Flowsave is an open-source CLI, self-hosted agent, and paid SaaS dashboard for n8n self-hosters. Never lose a workflow again.
 
-## Coming soon
+## Install
 
-- `flowsave backup` — snapshot all workflows, credentials, and folder structure *(folder layout requires n8n Enterprise; community edition backs up workflows flat)*
-- `flowsave restore` — restore any snapshot to the same or a new instance
-- `flowsave migrate` — full instance migration in one command
-- `flowsave diff` — see exactly what changed between two snapshots
+```bash
+npm install -g flowsave
+```
+
+Requires Node.js ≥ 18. Your n8n instance must be reachable from the machine running Flowsave.
+
+## Quick start
+
+```bash
+flowsave config init      # one-time setup
+flowsave backup           # take your first snapshot
+flowsave list             # see all snapshots
+```
+
+## Commands
+
+### `flowsave backup`
+
+Snapshot all workflows and (optionally) encrypted credentials from your n8n instance.
+
+```bash
+flowsave backup
+```
+
+- Workflows are saved as JSON files under `~/.flowsave/backups/<id>/`
+- If a Docker container is configured, prompts for a passphrase and exports credentials encrypted with AES-256-GCM
+- **Folder structure** is preserved only on n8n Enterprise (the folder REST API is an Enterprise feature); community edition backups are flat — all workflows at root level
+
+---
+
+### `flowsave restore [id]`
+
+Restore a snapshot to an n8n instance.
+
+```bash
+flowsave restore 3
+flowsave restore --snap 3                               # same thing
+
+# Cross-instance restore (creates new workflows, never updates by ID)
+flowsave restore 3 --to http://new-instance:5678 --api-key <key>
+
+# With credential decryption
+flowsave restore 3 --passphrase <passphrase>
+```
+
+| Flag | Description |
+|------|-------------|
+| `--to <url>` | Target instance URL (cross-instance mode) |
+| `--api-key <key>` | Target API key — required when `--to` is used |
+| `--passphrase <key>` | Passphrase to decrypt backed-up credentials |
+
+---
+
+### `flowsave migrate`
+
+Back up the source instance and restore to a new instance in one command.
+
+```bash
+flowsave migrate --to http://new-instance:5678 --api-key <key>
+
+# With credential migration
+flowsave migrate --to http://new-instance:5678 --api-key <key> --passphrase <passphrase>
+```
+
+| Flag | Description |
+|------|-------------|
+| `--to <url>` | Destination n8n instance URL *(required)* |
+| `--api-key <key>` | Destination n8n API key *(required)* |
+| `--passphrase <key>` | Passphrase for credential encryption/decryption |
+
+---
+
+### `flowsave diff <id1> <id2>`
+
+Compare two snapshots and show what changed.
+
+```bash
+flowsave diff 3 5
+```
+
+Shows added, removed, and modified workflows. For modified workflows, shows field-level context:
+- `nodes: 4 → 6 (+2)` — node count change
+- `active: true → false` — activation toggle
+- `name: "Old" → "New"` — rename
+
+---
+
+### `flowsave list`
+
+List all local snapshots in a table.
+
+```bash
+flowsave list
+```
+
+Shows snapshot ID, timestamp, workflow count, and size.
+
+---
+
+### `flowsave push`
+
+Push the latest snapshot to the configured Git remote.
+
+```bash
+flowsave push
+```
+
+Requires `gitRemote` to be set in your config (`flowsave config set gitRemote <url>`). Credentials files are excluded from git automatically.
+
+---
+
+### `flowsave config`
+
+Manage your Flowsave configuration (`~/.flowsave/config.json`).
+
+#### `flowsave config init`
+
+Interactive setup wizard. Run this once after installing.
+
+```bash
+flowsave config init
+```
+
+Prompts for: instance URL, API key, Docker container name (optional, for credential backup), backup directory, Git remote (optional).
+
+#### `flowsave config show`
+
+Print the current configuration. The API key is masked.
+
+```bash
+flowsave config show
+```
+
+#### `flowsave config set <key> <value>`
+
+Update a single field without re-running the full wizard.
+
+```bash
+flowsave config set gitRemote https://github.com/you/n8n-backups.git
+flowsave config set gitBranch main
+flowsave config set containerName n8n
+flowsave config set backupDir /mnt/backups
+```
+
+---
+
+### `flowsave doctor`
+
+Diagnose your setup. Checks config, n8n reachability, Docker container, and backup directory.
+
+```bash
+flowsave doctor
+```
+
+---
+
+## Notes on n8n editions
+
+| Feature | Community (free) | Enterprise |
+|---------|-----------------|------------|
+| Workflow backup & restore | ✅ | ✅ |
+| Credential backup & restore | ✅ (via docker exec) | ✅ |
+| Folder structure in backup | ✗ | ✅ |
+| Folder structure on restore | ✗ | ✅ |
+
+The folder REST API (`GET /api/v1/projects/{id}/folders`) is gated behind an n8n Enterprise license. On community edition, Flowsave backs up and restores all workflows flat — nothing is lost, subdirectory layout is just not preserved.
 
 ## Status
 
