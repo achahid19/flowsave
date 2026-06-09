@@ -41,6 +41,68 @@ interface PaginatedResponse<T> {
   nextCursor: string | null;
 }
 
+// ---------------------------------------------------------------------------
+// Settings sanitisation
+// ---------------------------------------------------------------------------
+
+/**
+ * Keys the n8n public API accepts inside the workflow `settings` object.
+ * Source: PUT /api/v1/workflows/{id} JSON Schema (additionalProperties: false).
+ * Any other key returned by GET causes a 400 "must NOT have additional properties".
+ */
+const ALLOWED_SETTINGS_KEYS = new Set([
+  'saveExecutionProgress',
+  'saveManualExecutions',
+  'saveDataErrorExecution',
+  'saveDataSuccessExecution',
+  'executionTimeout',
+  'errorWorkflow',
+  'timezone',
+  'executionOrder',
+  'callerPolicy',
+  'callerIds',
+  'timeSavedPerExecution',
+  'redactionPolicy',
+  'availableInMCP',
+  'customTelemetryTags',
+]);
+
+/**
+ * For enum-typed settings fields, the valid string values.
+ * n8n returns 'DEFAULT' for fields that inherit the instance setting — that
+ * value is NOT in the enum and will cause a 400 if sent back.
+ */
+const SETTINGS_ENUM_VALUES: Record<string, ReadonlySet<string>> = {
+  saveDataErrorExecution:    new Set(['all', 'none']),
+  saveDataSuccessExecution:  new Set(['all', 'none']),
+  callerPolicy:              new Set(['any', 'none', 'workflowsFromAList', 'workflowsFromSameOwner']),
+  redactionPolicy:           new Set(['none', 'non-manual', 'manual-only', 'all']),
+};
+
+/**
+ * Strip any key that the PUT /api/v1/workflows/{id} schema does not allow,
+ * and drop enum values that are outside the valid set (e.g. 'DEFAULT').
+ * Returns an empty object if settings is null / undefined.
+ */
+function sanitizeSettings(settings: Record<string, unknown> | undefined): Record<string, unknown> {
+  if (!settings) return {};
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(settings)) {
+    if (!ALLOWED_SETTINGS_KEYS.has(key)) continue;
+    const validEnum = SETTINGS_ENUM_VALUES[key];
+    if (validEnum) {
+      // Skip values not in the valid enum (covers 'DEFAULT' and any future strays)
+      if (typeof value !== 'string' || !validEnum.has(value)) continue;
+    }
+    out[key] = value;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Payload types
+// ---------------------------------------------------------------------------
+
 /**
  * Fields the n8n public API accepts on POST /api/v1/workflows.
  * `active` and `tags` are NOT accepted here — they have dedicated endpoints:
@@ -60,14 +122,15 @@ interface WorkflowCreatePayload {
 
 /**
  * Fields the n8n public API accepts on PUT /api/v1/workflows/{id}.
- * Same whitelist as create — no id, no active, no tags, no parentFolderId.
+ * `settings` is in the required[] array of the schema — always send it.
+ * No id, no active, no tags, no parentFolderId on update.
  * (Folder reassignment via PUT is not supported; use a dedicated move endpoint if added.)
  */
 interface WorkflowUpdatePayload {
   name: string;
   nodes: unknown[];
   connections: Record<string, unknown>;
-  settings?: Record<string, unknown>;
+  settings: Record<string, unknown>;   // required by PUT schema; use {} if no settings
   staticData?: unknown;
 }
 
@@ -196,11 +259,12 @@ export class N8nClient {
   ): Promise<N8nWorkflow> {
     // Whitelist only the fields n8n accepts — extra fields cause 422 validation errors.
     // `active` and `tags` are set separately after creation via dedicated endpoints.
+    const cleanSettings = sanitizeSettings(data.settings as Record<string, unknown> | undefined);
     const payload: WorkflowCreatePayload = {
       name: data.name,
       nodes: data.nodes,
       connections: data.connections,
-      ...(data.settings !== undefined && { settings: data.settings }),
+      ...(Object.keys(cleanSettings).length > 0 && { settings: cleanSettings }),
       ...(data.staticData !== undefined && { staticData: data.staticData }),
       ...(data.parentFolderId !== undefined && { parentFolderId: data.parentFolderId }),
       ...(projectId !== undefined && { projectId }),
@@ -220,7 +284,9 @@ export class N8nClient {
       name: data.name,
       nodes: data.nodes,
       connections: data.connections,
-      ...(data.settings !== undefined && { settings: data.settings }),
+      // settings is required by the PUT schema — always send it, even if empty.
+      // sanitizeSettings strips unknown keys and invalid enum values (e.g. 'DEFAULT').
+      settings: sanitizeSettings(data.settings as Record<string, unknown> | undefined),
       ...(data.staticData !== undefined && { staticData: data.staticData }),
     };
     return this.request<N8nWorkflow>(

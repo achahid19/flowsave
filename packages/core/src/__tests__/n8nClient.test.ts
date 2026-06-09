@@ -148,7 +148,61 @@ describe('N8nClient', () => {
       expect(body).toHaveProperty('connections');
     });
 
-    it('includes optional settings and staticData when present', async () => {
+    it('includes valid settings fields and strips unknown keys', async () => {
+      mockFetch.mockResolvedValue(
+        makeOkResponse({ id: 'wf-1', name: 'T', active: false, nodes: [], connections: {} })
+      );
+      await client.updateWorkflow('wf-1', {
+        name: 'T',
+        active: false,
+        nodes: [],
+        connections: {},
+        settings: {
+          timezone: 'UTC',
+          unknownInternalField: 'value',       // should be stripped
+          anotherBogusKey: true,               // should be stripped
+        } as Record<string, unknown>,
+      });
+
+      const body = getLastCallBody();
+      expect(body.settings).toHaveProperty('timezone', 'UTC');
+      expect(body.settings).not.toHaveProperty('unknownInternalField');
+      expect(body.settings).not.toHaveProperty('anotherBogusKey');
+    });
+
+    it('strips enum values outside the valid set (e.g. "DEFAULT")', async () => {
+      mockFetch.mockResolvedValue(
+        makeOkResponse({ id: 'wf-1', name: 'T', active: false, nodes: [], connections: {} })
+      );
+      await client.updateWorkflow('wf-1', {
+        name: 'T',
+        active: false,
+        nodes: [],
+        connections: {},
+        settings: {
+          saveDataErrorExecution: 'DEFAULT',    // invalid enum value — strip it
+          saveDataSuccessExecution: 'all',      // valid — keep it
+          timezone: 'Europe/Paris',
+        } as Record<string, unknown>,
+      });
+
+      const body = getLastCallBody();
+      expect(body.settings).not.toHaveProperty('saveDataErrorExecution');
+      expect(body.settings).toHaveProperty('saveDataSuccessExecution', 'all');
+      expect(body.settings).toHaveProperty('timezone', 'Europe/Paris');
+    });
+
+    it('always sends settings key (even when empty) since it is required by PUT schema', async () => {
+      mockFetch.mockResolvedValue(
+        makeOkResponse({ id: 'wf-1', name: 'T', active: false, nodes: [], connections: {} })
+      );
+      await client.updateWorkflow('wf-1', { name: 'T', active: false, nodes: [], connections: {} });
+
+      const body = getLastCallBody();
+      expect(body).toHaveProperty('settings');
+    });
+
+    it('includes optional staticData when present', async () => {
       mockFetch.mockResolvedValue(
         makeOkResponse({ id: 'wf-1', name: 'T', active: false, nodes: [], connections: {} })
       );
