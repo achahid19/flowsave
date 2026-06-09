@@ -6,7 +6,7 @@ import {
   it,
   vi,
 } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -75,7 +75,6 @@ describe('deleteSnapshot', () => {
   });
 
   it('removes the entry from index.json', () => {
-    const { readFileSync } = require('fs');
     deleteSnapshot(1, config);
     const index = JSON.parse(readFileSync(join(homeDir, 'index.json'), 'utf-8'));
     expect(index).toHaveLength(1);
@@ -94,7 +93,6 @@ describe('deleteSnapshot', () => {
   it('still removes from index even if directory is missing from disk', () => {
     rmSync(join(backupDir, '1'), { recursive: true });
     deleteSnapshot(1, config);
-    const { readFileSync } = require('fs');
     const index = JSON.parse(readFileSync(join(homeDir, 'index.json'), 'utf-8'));
     expect(index.find((e: { id: number }) => e.id === 1)).toBeUndefined();
   });

@@ -6,7 +6,7 @@ import {
   it,
   vi,
 } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -133,7 +133,6 @@ describe('pruneSnapshots', () => {
   });
 
   it('does not delete files when dryRun=true', () => {
-    const { existsSync } = require('fs');
     seedIndex([1, 2]);
     const wfs = [{ id: 'wf-1', name: 'Same' }];
     makeSnapshot(1, wfs);
@@ -144,7 +143,6 @@ describe('pruneSnapshots', () => {
   });
 
   it('deletes files and updates index when dryRun=false', () => {
-    const { existsSync, readFileSync } = require('fs');
     seedIndex([1, 2]);
     const wfs = [{ id: 'wf-1', name: 'Same' }];
     makeSnapshot(1, wfs);
