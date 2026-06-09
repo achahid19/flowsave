@@ -211,7 +211,7 @@ flowsave doctor
 | Feature | Community (free) | Enterprise |
 |---------|-----------------|------------|
 | Workflow backup & restore | ✅ | ✅ |
-| Credential backup & restore | ✅ (via docker exec) | ✅ |
+| Credential backup & restore | ✅ (via docker exec) | ✅ (via docker exec) |
 | Folder structure in backup | ✗ | ✅ |
 | Folder structure on restore | ✗ | ✅ |
 
