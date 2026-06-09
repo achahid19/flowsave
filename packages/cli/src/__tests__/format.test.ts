@@ -68,20 +68,48 @@ describe('renderDiff', () => {
     expect(result).toContain('[DevOps]');
   });
 
-  it('shows modified workflows with field changes', () => {
+  it('shows modified workflows with node count delta', () => {
     const result = renderDiff({
       ...empty,
       modified: [
         {
           name: 'Changed',
           folderPath: [],
-          changes: [{ field: 'nodes', before: [], after: [{ id: 'n1' }] }],
+          changes: [{ field: 'nodes', before: [1, 2], after: [1, 2, 3] }],
         },
       ],
     });
     expect(result).toContain('Modified (1)');
     expect(result).toContain('Changed');
-    expect(result).toContain('nodes');
+    expect(result).toContain('nodes: 2 → 3 (+1)');
+  });
+
+  it('shows active state change as before → after', () => {
+    const result = renderDiff({
+      ...empty,
+      modified: [
+        {
+          name: 'Toggled',
+          folderPath: [],
+          changes: [{ field: 'active', before: true, after: false }],
+        },
+      ],
+    });
+    expect(result).toContain('active: true → false');
+  });
+
+  it('shows name rename as old → new', () => {
+    const result = renderDiff({
+      ...empty,
+      modified: [
+        {
+          name: 'Renamed',
+          folderPath: [],
+          changes: [{ field: 'name', before: 'Old Name', after: 'New Name' }],
+        },
+      ],
+    });
+    expect(result).toContain('"Old Name" → "New Name"');
   });
 
   it('shows unchanged count when something else changed', () => {

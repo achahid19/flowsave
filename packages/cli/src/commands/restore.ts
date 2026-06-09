@@ -22,16 +22,25 @@ export function register(program: Command): void {
   program
     .command('restore')
     .description('Restore a snapshot to an n8n instance')
-    .requiredOption('--snap <id>', 'Snapshot ID to restore (see "flowsave list")')
+    .argument('[id]', 'Snapshot ID to restore — e.g. flowsave restore 3')
+    .option('--snap <id>', 'Snapshot ID (alternative to positional argument)')
     .option('--to <url>', 'Target instance URL for cross-instance restore')
     .option('--api-key <key>', 'Target instance API key for cross-instance restore')
     .option('--passphrase <key>', 'Passphrase to decrypt credentials')
-    .action(async (opts: { snap: string; to?: string; apiKey?: string; passphrase?: string }) => {
+    .action(async (id: string | undefined, opts: { snap?: string; to?: string; apiKey?: string; passphrase?: string }) => {
       const config = loadConfigOrExit();
-      const snapshotId = parseInt(opts.snap, 10);
+
+      const rawId = id ?? opts.snap;
+      if (!rawId) {
+        console.error(chalk.red('✗ Snapshot ID required. Usage: flowsave restore <id>'));
+        console.error(chalk.gray('  Run "flowsave list" to see available snapshots.'));
+        process.exit(1);
+      }
+
+      const snapshotId = parseInt(rawId, 10);
 
       if (isNaN(snapshotId)) {
-        console.error(chalk.red(`✗ Invalid snapshot ID: "${opts.snap}". Must be an integer.`));
+        console.error(chalk.red(`✗ Invalid snapshot ID: "${rawId}". Must be an integer.`));
         process.exit(1);
       }
 

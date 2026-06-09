@@ -39,6 +39,48 @@ export function formatDate(iso: string): string {
 // ---------------------------------------------------------------------------
 
 /**
+ * Produce a human-readable description of a single field change.
+ * - Scalar fields (name, active): show before → after
+ * - Array fields (nodes, connections): show count delta
+ */
+function describeChange(field: string, before: unknown, after: unknown): string {
+  // Active toggle: show the exact state change
+  if (field === 'active') {
+    return `active: ${before} → ${after}`;
+  }
+
+  // Name rename: show old → new
+  if (field === 'name' && typeof before === 'string' && typeof after === 'string') {
+    const bTrunc = before.length > 30 ? before.slice(0, 30) + '…' : before;
+    const aTrunc = after.length > 30 ? after.slice(0, 30) + '…' : after;
+    return `name: "${bTrunc}" → "${aTrunc}"`;
+  }
+
+  // Nodes: show count and delta
+  if (field === 'nodes' && Array.isArray(before) && Array.isArray(after)) {
+    const delta = after.length - before.length;
+    const sign = delta > 0 ? `+${delta}` : String(delta);
+    const deltaStr = delta !== 0 ? ` (${sign})` : '';
+    return `nodes: ${before.length} → ${after.length}${deltaStr}`;
+  }
+
+  // Connections: count changed connections
+  if (field === 'connections' && typeof before === 'object' && typeof after === 'object' && before !== null && after !== null) {
+    const keysB = Object.keys(before as object).length;
+    const keysA = Object.keys(after as object).length;
+    if (keysB !== keysA) {
+      const delta = keysA - keysB;
+      const sign = delta > 0 ? `+${delta}` : String(delta);
+      return `connections: ${keysB} → ${keysA} connections (${sign})`;
+    }
+    return `connections: updated`;
+  }
+
+  // Settings and anything else
+  return `${field}: updated`;
+}
+
+/**
  * Render a DiffResult as a chalk-colored multi-line string suitable for
  * printing directly to stdout. Returns empty string if no diff to show.
  */
@@ -76,7 +118,7 @@ export function renderDiff(result: DiffResult): string {
       lines.push(chalk.yellow(`  ~ ${wf.name}${folder}`));
       if (wf.changes && wf.changes.length > 0) {
         for (const change of wf.changes) {
-          lines.push(chalk.gray(`      ${change.field}: changed`));
+          lines.push(chalk.gray(`      ${describeChange(change.field, change.before, change.after)}`));
         }
       }
     }

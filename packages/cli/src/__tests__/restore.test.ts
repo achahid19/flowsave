@@ -65,13 +65,32 @@ describe('flowsave restore', () => {
     vi.clearAllMocks();
   });
 
-  it('calls restore() with parsed snapshotId', async () => {
+  it('calls restore() with parsed snapshotId via --snap flag', async () => {
     const program = makeProgram();
     register(program);
     await program.parseAsync(['node', 'flowsave', 'restore', '--snap', '5']);
     expect(mocks.restore).toHaveBeenCalledWith(
       expect.objectContaining({ snapshotId: 5 })
     );
+  });
+
+  it('calls restore() with parsed snapshotId via positional argument', async () => {
+    const program = makeProgram();
+    register(program);
+    await program.parseAsync(['node', 'flowsave', 'restore', '7']);
+    expect(mocks.restore).toHaveBeenCalledWith(
+      expect.objectContaining({ snapshotId: 7 })
+    );
+  });
+
+  it('exits 1 when no snapshot ID is provided', async () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => { throw new Error('exit'); });
+    const program = makeProgram();
+    register(program);
+    await expect(
+      program.parseAsync(['node', 'flowsave', 'restore'])
+    ).rejects.toThrow('exit');
+    expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it('sets forceCreate=true when --to flag is provided', async () => {
