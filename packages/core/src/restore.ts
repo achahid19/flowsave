@@ -172,15 +172,17 @@ function readWorkflowsFromDisk(snapshotPath: string): WorkflowBackup[] {
  * Create the folder hierarchy on the target instance.
  *
  * Returns a map from folder path string (e.g. "DevOps/Deploy") to the new
- * folder ID on the target instance.
+ * folder ID on the target instance, plus any warnings generated.
  *
- * If folder creation fails (undocumented API may break), returns null to
- * signal that the caller should fall back to a flat restore.
+ * If folder creation fails (undocumented internal API), folderIdMap is null —
+ * the caller should fall back to flat restore.
  */
 async function createFolderHierarchy(
   client: N8nClient,
   workflows: WorkflowBackup[]
-): Promise<Map<string, string> | null> {
+): Promise<{ folderIdMap: Map<string, string> | null; warnings: string[] }> {
+  const warnings: string[] = [];
+
   // Collect unique folder paths from all workflows
   const uniquePaths = new Set<string>();
   for (const wf of workflows) {
@@ -193,7 +195,7 @@ async function createFolderHierarchy(
   }
 
   if (uniquePaths.size === 0) {
-    return new Map(); // No folders needed
+    return { folderIdMap: new Map(), warnings }; // No folders needed
   }
 
   const folderIdMap = new Map<string, string>(); // path → new folder ID
@@ -214,15 +216,16 @@ async function createFolderHierarchy(
       folderIdMap.set(pathStr, folder.id);
     }
 
-    return folderIdMap;
+    return { folderIdMap, warnings };
   } catch (err) {
     if (err instanceof N8nApiError) {
-      // Expected failure — internal API might not be available
-      process.stderr.write(
-        `[flowsave] Warning: folder creation failed (${err.message}). ` +
-        `Falling back to flat restore — all workflows will be placed at root level.\n`
+      warnings.push(
+        `Folder structure could not be recreated on the target instance ` +
+        `(POST /rest/folders → ${err.statusCode}: ${err.message}). ` +
+        `All workflows have been placed at the root level instead. ` +
+        `This is expected on community edition targets — folders require Enterprise.`
       );
-      return null;
+      return { folderIdMap: null, warnings };
     }
     throw err;
   }
@@ -267,8 +270,9 @@ export async function restore(options: RestoreOptions): Promise<Snapshot> {
   const client = new N8nClient(resolvedUrl, resolvedApiKey);
 
   // 4. Attempt folder hierarchy creation on target
-  const folderIdMap = await createFolderHierarchy(client, workflows);
+  const { folderIdMap, warnings } = await createFolderHierarchy(client, workflows);
   const useFlatRestore = folderIdMap === null;
+  const folderStructureRestored = !useFlatRestore && folderIdMap.size > 0;
 
   // 5. Restore workflows
   for (const wf of workflows) {
@@ -305,58 +309,55 @@ export async function restore(options: RestoreOptions): Promise<Snapshot> {
     })();
 
     // Enforce the backed-up active state for full fidelity — but only call the
-    // API when the current state actually differs, to avoid redundant requests
-    // and noisy "already (in)active" warnings.
+    // API when the current state actually differs, to avoid redundant requests.
     const desiredActive = wf.data.active === true;
     const currentActive = result.active === true;
     if (desiredActive && !currentActive) {
       try {
         await client.activateWorkflow(result.id);
       } catch {
-        process.stderr.write(
-          `[flowsave] Warning: could not activate workflow "${wf.name}" (id: ${result.id}).\n`
-        );
+        warnings.push(`Could not activate workflow "${wf.name}" — it was left inactive.`);
       }
     } else if (!desiredActive && currentActive) {
       try {
         await client.deactivateWorkflow(result.id);
       } catch {
-        process.stderr.write(
-          `[flowsave] Warning: could not deactivate workflow "${wf.name}" (id: ${result.id}).\n`
-        );
+        warnings.push(`Could not deactivate workflow "${wf.name}" — it was left active.`);
       }
     }
 
     // Restore tags on same-instance restore only.
-    // Cross-instance (forceCreate): tag IDs differ across instances — skip with a warning.
+    // Cross-instance (forceCreate): tag IDs differ across instances — skip silently.
     if (!forceCreate && wf.data.tags && wf.data.tags.length > 0) {
       try {
         await client.updateWorkflowTags(result.id, wf.data.tags);
       } catch {
-        process.stderr.write(
-          `[flowsave] Warning: could not restore tags for workflow "${wf.name}".\n`
-        );
+        warnings.push(`Could not restore tags for workflow "${wf.name}".`);
       }
     }
   }
 
   // 6. Restore credentials if present
+  let credentialsRestored = false;
   const credentialsPath = join(snapshotPath, '_credentials.enc.json');
   if (existsSync(credentialsPath)) {
     const containerName = targetContainerName ?? config.containerName;
     if (!containerName) {
-      process.stderr.write(
-        `[flowsave] Warning: snapshot contains credentials but no containerName is configured. ` +
-        `Skipping credential restore.\n`
+      warnings.push(
+        'Snapshot contains encrypted credentials but no Docker container is configured. ' +
+        'Credential restore was skipped. ' +
+        'Set containerName in your config to restore credentials: flowsave config set containerName <name>'
       );
     } else if (!passphrase) {
-      process.stderr.write(
-        `[flowsave] Warning: snapshot contains credentials but no passphrase provided. ` +
-        `Skipping credential restore.\n`
+      warnings.push(
+        'Snapshot contains encrypted credentials but no passphrase was provided. ' +
+        'Credential restore was skipped. ' +
+        'Re-run with --passphrase to restore credentials.'
       );
     } else {
       const encryptedData = readFileSync(credentialsPath);
       await importCredentials(containerName, encryptedData, passphrase);
+      credentialsRestored = true;
     }
   }
 
@@ -365,6 +366,8 @@ export async function restore(options: RestoreOptions): Promise<Snapshot> {
     meta,
     workflows,
     snapshotPath,
-    credentialsIncluded: meta.credentialsIncluded,
+    credentialsIncluded: credentialsRestored,
+    folderStructureRestored,
+    warnings: warnings.length > 0 ? warnings : undefined,
   };
 }

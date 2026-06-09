@@ -163,6 +163,17 @@ export interface Snapshot {
   /** Absolute path to the snapshot directory on disk. */
   snapshotPath: string;
   credentialsIncluded: boolean;
+  /**
+   * True when folder hierarchy was successfully re-created on the target during
+   * a restore/migrate. Undefined on backup snapshots or when no folders existed.
+   */
+  folderStructureRestored?: boolean;
+  /**
+   * Non-fatal warnings generated during the operation (folder skips, credential
+   * skips, activation failures, etc.). The CLI displays these after the spinner
+   * so the user sees them clearly without stderr interleaving.
+   */
+  warnings?: string[];
 }
 
 // ---------------------------------------------------------------------------

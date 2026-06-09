@@ -61,7 +61,7 @@ export async function migrate(options: MigrateOptions): Promise<Snapshot> {
 
   // Step 2: restore to destination (always create new — never update by ID
   // since the destination has different IDs or is a fresh instance)
-  await restore({
+  const restoreResult = await restore({
     snapshotId: snapshot.id,
     config,
     targetUrl,
@@ -71,5 +71,16 @@ export async function migrate(options: MigrateOptions): Promise<Snapshot> {
     forceCreate: true,
   });
 
-  return snapshot;
+  // Merge warnings from both steps so the CLI can display them in one place
+  const allWarnings = [
+    ...(snapshot.warnings ?? []),
+    ...(restoreResult.warnings ?? []),
+  ];
+
+  return {
+    ...snapshot,
+    credentialsIncluded: restoreResult.credentialsIncluded,
+    folderStructureRestored: restoreResult.folderStructureRestored,
+    warnings: allWarnings.length > 0 ? allWarnings : undefined,
+  };
 }
