@@ -87,10 +87,15 @@ function describeChange(field: string, before: unknown, after: unknown): string 
 export function renderDiff(result: DiffResult): string {
   const lines: string[] = [];
 
+  const hasCredentialChanges =
+    result.credentials !== undefined &&
+    (result.credentials.added.length > 0 || result.credentials.removed.length > 0);
+
   if (
     result.added.length === 0 &&
     result.removed.length === 0 &&
-    result.modified.length === 0
+    result.modified.length === 0 &&
+    !hasCredentialChanges
   ) {
     return chalk.gray('Snapshots are identical.');
   }

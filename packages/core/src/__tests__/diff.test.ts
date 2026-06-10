@@ -266,6 +266,22 @@ describe('diff', () => {
     expect(result.credentials?.removed).toHaveLength(0);
   });
 
+  it('does not return "identical" when only credentials changed', () => {
+    const wf = makeWorkflow('wf-1', 'Alpha');
+    writeSnapshot(homeDir, backupDir, 1, [{ wf }]);
+    writeSnapshot(homeDir, backupDir, 2, [{ wf }]);
+
+    const credsA = [{ id: 'cred-1', name: 'My API Key', type: 'httpHeaderAuth' }];
+    writeFileSync(join(backupDir, '1', '_credentials.meta.json'), JSON.stringify(credsA));
+    writeFileSync(join(backupDir, '2', '_credentials.meta.json'), JSON.stringify([]));
+
+    const result = diff(1, 2, config);
+
+    // Workflows unchanged but credential was removed — should not be "identical"
+    expect(result.unchanged).toBe(1);
+    expect(result.credentials?.removed).toHaveLength(1);
+  });
+
   it('treats missing meta in one snapshot as empty list', () => {
     const wf = makeWorkflow('wf-1', 'Alpha');
     writeSnapshot(homeDir, backupDir, 1, [{ wf }]);
