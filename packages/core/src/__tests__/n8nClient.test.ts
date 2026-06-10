@@ -438,53 +438,6 @@ describe('N8nClient', () => {
   });
 
   // -------------------------------------------------------------------------
-  // getVersion
-  // -------------------------------------------------------------------------
-
-  describe('getVersion', () => {
-    it('returns version from GET /api/v1/ body when the endpoint exists', async () => {
-      mockFetch.mockResolvedValue(makeOkResponse({ version: '1.90.0' }));
-      const version = await client.getVersion();
-      expect(version).toBe('1.90.0');
-    });
-
-    it('falls back to X-N8N-Version response header when GET /api/v1/ returns 404', async () => {
-      mockFetch
-        // First call: GET /api/v1/ → 404
-        .mockResolvedValueOnce(makeErrorResponse(404))
-        // Second call: GET /api/v1/workflows?limit=1 → 200 with version header
-        .mockResolvedValueOnce(makeOkResponse({ data: [], nextCursor: null }, 200, { 'X-N8N-Version': '2.18.0' }));
-
-      const version = await client.getVersion();
-      expect(version).toBe('2.18.0');
-    });
-
-    it('uses already-detected version if a prior request captured the header', async () => {
-      // Simulate a prior getWorkflows() call that already captured the header
-      mockFetch.mockResolvedValueOnce(
-        makeOkResponse({ data: [], nextCursor: null }, 200, { 'X-N8N-Version': '2.18.0' })
-      );
-      await client.getWorkflows();
-
-      // Now getVersion() should return the header without an extra request
-      mockFetch.mockResolvedValueOnce(makeErrorResponse(404)); // GET /api/v1/ fails
-      const version = await client.getVersion();
-      expect(version).toBe('2.18.0');
-      // Only 2 fetch calls total: getWorkflows + GET /api/v1/ — no extra fallback call
-      expect(mockFetch).toHaveBeenCalledTimes(2);
-    });
-
-    it('returns "unknown" when all version detection attempts fail', async () => {
-      mockFetch
-        .mockResolvedValueOnce(makeErrorResponse(404))  // GET /api/v1/
-        .mockResolvedValueOnce(makeErrorResponse(401)); // fallback workflows call
-
-      const version = await client.getVersion();
-      expect(version).toBe('unknown');
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // Error handling
   // -------------------------------------------------------------------------
 

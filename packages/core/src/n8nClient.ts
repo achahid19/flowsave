@@ -162,8 +162,6 @@ interface FolderCreatePayload {
 export class N8nClient {
   private readonly baseUrl: string;
   private readonly apiKey: string;
-  private detectedVersion: string | null = null;
-
   constructor(baseUrl: string, apiKey: string) {
     // Strip trailing slash for consistent URL construction
     this.baseUrl = baseUrl.replace(/\/$/, '');
@@ -220,12 +218,6 @@ export class N8nClient {
         `n8n API ${method} ${path} returned ${response.status}${detail}`,
         response.status
       );
-    }
-
-    // Capture version header as a side-effect of any successful response
-    const versionHeader = response.headers.get('X-N8N-Version');
-    if (versionHeader && this.detectedVersion === null) {
-      this.detectedVersion = versionHeader;
     }
 
     // 204 No Content
@@ -471,36 +463,6 @@ export class N8nClient {
   // -------------------------------------------------------------------------
   // Instance info
   // -------------------------------------------------------------------------
-
-  /**
-   * Attempt to retrieve the n8n instance version.
-   *
-   * Strategy (in order):
-   * 1. GET /api/v1/ — works on some n8n versions, returns { version } in body.
-   * 2. X-N8N-Version response header — present on all successful responses.
-   *    If a parallel request (e.g. getWorkflows) already set detectedVersion, use it.
-   *    Otherwise make a cheap known-working request to trigger header capture.
-   * 3. Falls back to "unknown" if all else fails.
-   */
-  async getVersion(): Promise<string> {
-    try {
-      const info = await this.request<Record<string, unknown>>('GET', '/api/v1/');
-      if (typeof info['version'] === 'string') return info['version'];
-    } catch {
-      // endpoint not available on this n8n version — fall through
-    }
-
-    if (this.detectedVersion !== null) return this.detectedVersion;
-
-    // Trigger header capture via a known-working lightweight request
-    try {
-      await this.request<unknown>('GET', '/api/v1/workflows?limit=1');
-    } catch {
-      // ignore — version stays unknown
-    }
-
-    return this.detectedVersion ?? 'unknown';
-  }
 
   /**
    * Test connectivity to the n8n instance.
