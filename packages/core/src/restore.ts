@@ -343,13 +343,30 @@ export async function restore(options: RestoreOptions): Promise<Snapshot> {
   let credentialsRestored = false;
   const credentialsPath = join(snapshotPath, '_credentials.enc.json');
   if (existsSync(credentialsPath)) {
-    const containerName = targetContainerName ?? config.containerName;
+    // For same-instance restore, fall back to config.containerName.
+    // For cross-instance restore (forceCreate), NEVER fall back to the source
+    // container — that would silently import credentials into the wrong instance.
+    // Cross-instance credential restore requires the user to explicitly provide
+    // --target-container pointing to a locally-accessible Docker container.
+    const containerName = forceCreate
+      ? (targetContainerName ?? null)
+      : (targetContainerName ?? config.containerName);
+
     if (!containerName) {
-      warnings.push(
-        'Snapshot contains encrypted credentials but no Docker container is configured. ' +
-        'Credential restore was skipped. ' +
-        'Set containerName in your config to restore credentials: flowsave config set containerName <name>'
-      );
+      if (forceCreate) {
+        warnings.push(
+          'Credentials were NOT restored to the target instance. ' +
+          'Cross-instance credential restore requires Docker access to the target container. ' +
+          'If the target container is accessible on this machine, re-run with --target-container <name>. ' +
+          'Otherwise, import credentials manually via the n8n UI on the target instance.'
+        );
+      } else {
+        warnings.push(
+          'Snapshot contains encrypted credentials but no Docker container is configured. ' +
+          'Credential restore was skipped. ' +
+          'Set containerName in your config to restore credentials: flowsave config set containerName <name>'
+        );
+      }
     } else if (!passphrase) {
       warnings.push(
         'Snapshot contains encrypted credentials but no passphrase was provided. ' +

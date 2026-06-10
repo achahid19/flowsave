@@ -26,8 +26,9 @@ export function register(program: Command): void {
     .option('--snap <id>', 'Snapshot ID (alternative to positional argument)')
     .option('--to <url>', 'Target instance URL for cross-instance restore')
     .option('--api-key <key>', 'Target instance API key for cross-instance restore')
+    .option('--target-container <name>', 'Docker container name on this machine for cross-instance credential import')
     .option('--passphrase <key>', 'Passphrase to decrypt credentials')
-    .action(async (id: string | undefined, opts: { snap?: string; to?: string; apiKey?: string; passphrase?: string }) => {
+    .action(async (id: string | undefined, opts: { snap?: string; to?: string; apiKey?: string; targetContainer?: string; passphrase?: string }) => {
       const config = loadConfigOrExit();
 
       const rawId = id ?? opts.snap;
@@ -49,9 +50,14 @@ export function register(program: Command): void {
         process.exit(1);
       }
 
-      // Prompt for passphrase if cross-instance or config has container and no passphrase given
+      // Prompt for passphrase if credentials could be restored:
+      // - same-instance: when config has a container
+      // - cross-instance: when --target-container is explicitly provided
+      const willAttemptCredentials = opts.to
+        ? opts.targetContainer !== undefined
+        : config.containerName !== undefined;
       let passphrase = opts.passphrase;
-      if (!passphrase && (opts.to || config.containerName)) {
+      if (!passphrase && willAttemptCredentials) {
         const { pass } = await inquirer.prompt<{ pass: string }>([
           {
             type: 'password',
@@ -73,6 +79,7 @@ export function register(program: Command): void {
           config,
           targetUrl: opts.to,
           targetApiKey: opts.apiKey,
+          targetContainerName: opts.targetContainer,
           passphrase,
           forceCreate: isCrossInstance,
         });
@@ -104,11 +111,12 @@ export function register(program: Command): void {
         }
 
         // Credentials status
-        console.log(`  ${chalk.cyan('Credentials'.padEnd(22))} ${
-          snapshot.credentialsIncluded
-            ? chalk.green('✓ decrypted & imported')
-            : chalk.gray('— not restored')
-        }`);
+        const credLabel = snapshot.credentialsIncluded
+          ? chalk.green('✓ decrypted & imported')
+          : isCrossInstance && m.credentialsIncluded
+            ? chalk.yellow('⚠ skipped — no --target-container provided')
+            : chalk.gray('— not restored');
+        console.log(`  ${chalk.cyan('Credentials'.padEnd(22))} ${credLabel}`);
 
         // ── Notices ──────────────────────────────────────────────────────────
         if (hadFolders && !snapshot.folderStructureRestored) {
