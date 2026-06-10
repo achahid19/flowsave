@@ -305,12 +305,17 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
   const snapshotPath = join(backupDir, String(snapshotId));
 
   if (existsSync(snapshotPath)) {
-    throw new BackupError(
-      `Snapshot directory ${snapshotPath} already exists. This should not happen — check for index corruption.`
-    );
+    // Orphaned directory from a previously-failed backup (created but never indexed).
+    // Clean it up so this run can proceed cleanly.
+    rmSync(snapshotPath, { recursive: true, force: true });
   }
 
   mkdirSync(snapshotPath, { recursive: true });
+
+  // Guard: clean up the partially-created snapshot directory if anything below fails,
+  // so the next backup run doesn't encounter an orphaned directory.
+  let completed = false;
+  try {
 
   // 3. Fetch workflows and version in parallel (folders need projectId from workflows first)
   const [workflows, n8nVersion] = await Promise.all([
@@ -417,6 +422,7 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
     'utf-8'
   );
 
+  completed = true;
   return {
     id: snapshotId,
     meta,
@@ -424,4 +430,10 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
     snapshotPath,
     credentialsIncluded,
   };
+
+  } finally {
+    if (!completed && existsSync(snapshotPath)) {
+      rmSync(snapshotPath, { recursive: true, force: true });
+    }
+  }
 }

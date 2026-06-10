@@ -187,6 +187,34 @@ describe('backup', () => {
     expect(existsSync(join(backupDir, '1', '_credentials.enc.json'))).toBe(true);
   });
 
+  it('cleans up orphaned snapshot directory if it exists but is not in the index', async () => {
+    // Simulates a previously-failed backup that created the directory but never
+    // wrote to the index — the next run must recover silently, not hard-error.
+    const config = { ...baseConfig, backupDir };
+    const orphanDir = join(backupDir, '1');
+    mkdirSync(orphanDir, { recursive: true });
+    writeFileSync(join(orphanDir, 'partial.json'), 'leftover');
+    // index.json is empty (no entry for id=1)
+
+    const snapshot = await backup({ config });
+
+    expect(snapshot.id).toBe(1);
+    // Orphan was replaced — partial file is gone, real snapshot files are there
+    expect(existsSync(join(backupDir, '1', 'partial.json'))).toBe(false);
+    expect(existsSync(join(backupDir, '1', 'meta.json'))).toBe(true);
+  });
+
+  it('cleans up newly-created snapshot directory when backup fails mid-way', async () => {
+    // Simulate a failure after the directory is created (e.g. n8n API error).
+    mocks.getWorkflows.mockRejectedValue(new Error('n8n unreachable'));
+    const config = { ...baseConfig, backupDir };
+
+    await expect(backup({ config })).rejects.toThrow();
+
+    // The partially-created snapshot directory must be gone — no orphan left behind.
+    expect(existsSync(join(backupDir, '1'))).toBe(false);
+  });
+
   it('sanitizes unsafe characters in workflow names', async () => {
     mocks.getWorkflows.mockResolvedValue([
       {
