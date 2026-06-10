@@ -172,13 +172,15 @@ flowsave config set backupDir /mnt/backups
 
 ---
 
-### `flowsave delete <id>`
+### `flowsave delete <id> [id...]`
 
-Permanently delete a single snapshot from disk and from the local index.
+Permanently delete one or more snapshots from disk and from the local index.
 
 ```bash
-flowsave delete 3          # prompts for confirmation
-flowsave delete 3 --yes    # skip confirmation
+flowsave delete 3              # prompts for confirmation
+flowsave delete 3 --yes        # skip confirmation
+flowsave delete 19 14 13       # delete multiple at once
+flowsave delete 19 14 13 --yes # skip confirmation
 ```
 
 | Flag | Description |
