@@ -435,6 +435,15 @@ export class N8nClient {
     return this.fetchAllPages<CredentialMetadata>('/api/v1/credentials');
   }
 
+  /**
+   * Delete a credential by ID.
+   * Used during same-instance restore to prune stale credentials that are
+   * absent from the snapshot's _credentials.meta.json.
+   */
+  async deleteCredential(id: string): Promise<void> {
+    await this.request<unknown>('DELETE', `/api/v1/credentials/${encodeURIComponent(id)}`);
+  }
+
   // -------------------------------------------------------------------------
   // Instance info
   // -------------------------------------------------------------------------

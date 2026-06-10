@@ -55,13 +55,15 @@ function runDockerCommand(args: string[]): Buffer {
   }
 
   if (result.status !== 0) {
-    // Sanitize stderr — never include content that could expose credential data
+    // n8n writes errors to stdout, not stderr — check both
     const stderr = result.stderr?.toString().trim() ?? '';
-    const safeStderr = stderr.length > 0
-      ? ` (docker error: ${stderr.substring(0, 200)})`
+    const stdout = result.stdout?.toString().trim() ?? '';
+    const details = stderr.length > 0 ? stderr : stdout;
+    const safeDetails = details.length > 0
+      ? ` (docker: ${details.substring(0, 300)})`
       : '';
     throw new CredentialError(
-      `docker command exited with code ${result.status}${safeStderr}`
+      `docker command exited with code ${result.status}${safeDetails}`
     );
   }
 
@@ -203,6 +205,11 @@ export async function importCredentials(
     // Step 3: copy from host into container
     runDockerCommand(['cp', hostTmpPath, `${containerName}:${containerTmpPath}`]);
 
+    // Step 3b: docker cp preserves 0o600 from the host and sets owner to root.
+    // n8n runs as a non-root user inside the container — chmod so it can read
+    // the file. The file is still deleted immediately after import.
+    runDockerCommand(['exec', '--user', 'root', containerName, 'chmod', '644', containerTmpPath]);
+
     // Step 4: import inside container
     runDockerCommand([
       'exec',
@@ -223,9 +230,9 @@ export async function importCredentials(
       }
     }
 
-    // Always clean up container temp file
+    // Always clean up container temp file — use root since docker cp sets owner to root
     try {
-      runDockerCommand(['exec', containerName, 'rm', '-f', containerTmpPath]);
+      runDockerCommand(['exec', '--user', 'root', containerName, 'rm', '-f', containerTmpPath]);
     } catch {
       process.stderr.write(
         `[flowsave] Warning: could not delete container temp file ${containerTmpPath}\n`

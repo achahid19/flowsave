@@ -183,8 +183,10 @@ describe('importCredentials', () => {
     await importCredentials('my-n8n', encryptedCreds, PASSPHRASE);
 
     const calls = vi.mocked(childProcess.spawnSync).mock.calls;
-    expect(calls[1][1]).toContain('exec');
-    expect(calls[1][1]).toContain('import:credentials');
+    const importCall = calls.find(
+      (c) => Array.isArray(c[1]) && c[1].includes('exec') && c[1].includes('import:credentials')
+    );
+    expect(importCall).toBeDefined();
   });
 
   it('always cleans up the container temp file', async () => {

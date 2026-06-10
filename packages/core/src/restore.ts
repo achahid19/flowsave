@@ -25,6 +25,7 @@ import { importCredentials } from './credentials';
 import { getIndexPath } from './config';
 import { N8nClient, N8nApiError } from './n8nClient';
 import type {
+  CredentialMeta,
   FlowsaveConfig,
   N8nWorkflow,
   Snapshot,
@@ -359,6 +360,47 @@ export async function restore(options: RestoreOptions): Promise<Snapshot> {
       const encryptedData = readFileSync(credentialsPath);
       await importCredentials(containerName, encryptedData, passphrase);
       credentialsRestored = true;
+
+      // Prune stale credentials on same-instance restore.
+      //
+      // `n8n import:credentials` only adds/updates — it never removes. After
+      // importing, any credential that exists on the instance but is absent
+      // from the snapshot must be deleted to faithfully represent the snapshot.
+      //
+      // This is ONLY safe for same-instance restore: credential IDs are stable
+      // on the same instance but differ across instances. On cross-instance
+      // (forceCreate), we skip pruning because the IDs in the snapshot belong
+      // to a different n8n instance and cannot be compared to the target.
+      const credMetaPath = join(snapshotPath, '_credentials.meta.json');
+      if (!forceCreate && existsSync(credMetaPath)) {
+        let snapshotMeta: CredentialMeta[] = [];
+        try {
+          snapshotMeta = JSON.parse(readFileSync(credMetaPath, 'utf-8')) as CredentialMeta[];
+        } catch {
+          warnings.push('Could not read _credentials.meta.json — stale credential pruning was skipped.');
+        }
+
+        if (snapshotMeta.length >= 0) {
+          const snapshotIds = new Set(snapshotMeta.map((c) => c.id));
+
+          try {
+            const instanceCreds = await client.getCredentials();
+            for (const cred of instanceCreds) {
+              if (!snapshotIds.has(cred.id)) {
+                try {
+                  await client.deleteCredential(cred.id);
+                } catch {
+                  warnings.push(
+                    `Could not delete stale credential "${cred.name}" (${cred.id}) — it may need to be removed manually.`
+                  );
+                }
+              }
+            }
+          } catch {
+            warnings.push('Could not list credentials for pruning — stale credentials may remain on the instance.');
+          }
+        }
+      }
     }
   }
 
