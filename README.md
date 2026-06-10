@@ -101,6 +101,18 @@ Shows added, removed, and modified workflows. For modified workflows, shows fiel
 
 ---
 
+### `flowsave show <id>`
+
+Show full details of a specific snapshot.
+
+```bash
+flowsave show 3
+```
+
+Displays metadata (date, instance URL, n8n version, size, credentials, folder backup) and a table of all workflows in the snapshot with name, active status, node count, and folder path.
+
+---
+
 ### `flowsave list`
 
 List all local snapshots in a table.

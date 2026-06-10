@@ -14,13 +14,14 @@ import {
   statSync,
   writeFileSync,
 } from 'fs';
-import { join, resolve } from 'path';
+import { join, relative, resolve, sep } from 'path';
 import { exportCredentials } from './credentials';
 import { getFlowsaveHome, getIndexPath } from './config';
 import { N8nClient } from './n8nClient';
 import type {
   FlowsaveConfig,
   N8nFolder,
+  N8nWorkflow,
   Snapshot,
   SnapshotIndexEntry,
   SnapshotMeta,
@@ -42,6 +43,13 @@ export class DeleteError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'DeleteError';
+  }
+}
+
+export class ShowError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ShowError';
   }
 }
 
@@ -181,6 +189,78 @@ export function deleteSnapshot(snapshotId: number, config: FlowsaveConfig): void
 
   const updated = entries.filter((e) => e.id !== snapshotId);
   writeFileSync(indexPath, JSON.stringify(updated, null, 2), 'utf-8');
+}
+
+// ---------------------------------------------------------------------------
+// Snapshot detail reader
+// ---------------------------------------------------------------------------
+
+export interface SnapshotDetail {
+  meta: SnapshotMeta;
+  workflows: WorkflowBackup[];
+  /** True when _credentials.enc.json is present on disk (cross-checks meta). */
+  hasCredentials: boolean;
+  snapshotPath: string;
+}
+
+/**
+ * Read the full detail of a snapshot from disk: meta.json + all workflow JSON files.
+ * Used by `flowsave show <id>`.
+ *
+ * Throws ShowError if the snapshot directory or meta.json is missing.
+ */
+export function readSnapshotDetail(snapshotId: number, config: FlowsaveConfig): SnapshotDetail {
+  const snapshotPath = join(resolve(config.backupDir), String(snapshotId));
+
+  if (!existsSync(snapshotPath)) {
+    throw new ShowError(
+      `Snapshot ${snapshotId} not found. Run "flowsave list" to see available snapshots.`
+    );
+  }
+
+  const metaPath = join(snapshotPath, 'meta.json');
+  if (!existsSync(metaPath)) {
+    throw new ShowError(`Snapshot ${snapshotId} is missing meta.json — it may be corrupt.`);
+  }
+
+  let meta: SnapshotMeta;
+  try {
+    meta = JSON.parse(readFileSync(metaPath, 'utf-8')) as SnapshotMeta;
+  } catch {
+    throw new ShowError(`Failed to parse meta.json for snapshot ${snapshotId}.`);
+  }
+
+  const hasCredentials = existsSync(join(snapshotPath, '_credentials.enc.json'));
+
+  const workflows: WorkflowBackup[] = [];
+
+  function walk(dir: string): void {
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry);
+      const stat = statSync(full);
+      if (stat.isDirectory()) {
+        walk(full);
+      } else if (
+        entry.endsWith('.json') &&
+        entry !== 'meta.json' &&
+        entry !== '_credentials.enc.json'
+      ) {
+        let workflow: N8nWorkflow;
+        try {
+          workflow = JSON.parse(readFileSync(full, 'utf-8')) as N8nWorkflow;
+        } catch {
+          throw new ShowError(`Failed to parse workflow file: ${full}`);
+        }
+        const relDir = relative(snapshotPath, dir);
+        const folderPath = relDir ? relDir.split(sep).filter((p) => p.length > 0) : [];
+        workflows.push({ id: workflow.id, name: workflow.name, folderPath, data: workflow });
+      }
+    }
+  }
+
+  walk(snapshotPath);
+
+  return { meta, workflows, hasCredentials, snapshotPath };
 }
 
 // ---------------------------------------------------------------------------
