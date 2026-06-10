@@ -80,7 +80,7 @@ const SETTINGS_ENUM_VALUES: Record<string, ReadonlySet<string>> = {
 };
 
 /**
- * Strip any key that the PUT /api/v1/workflows/{id} schema does not allow,
+ * Strip any key that the POST/PUT workflow schema does not allow,
  * and drop enum values that are outside the valid set (e.g. 'DEFAULT').
  * Returns an empty object if settings is null / undefined.
  */
@@ -99,24 +99,40 @@ function sanitizeSettings(settings: Record<string, unknown> | undefined): Record
   return out;
 }
 
+/**
+ * Strip readOnly fields from node objects returned by GET before sending to POST/PUT.
+ * Nodes have `additionalProperties: false` — `createdAt` and `updatedAt` are readOnly
+ * and rejected by the schema even though n8n includes them in GET responses.
+ */
+const NODE_READONLY_KEYS = new Set(['createdAt', 'updatedAt']);
+
+function sanitizeNodes(nodes: unknown[]): unknown[] {
+  return nodes.map((node) => {
+    if (typeof node !== 'object' || node === null) return node;
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+      if (!NODE_READONLY_KEYS.has(key)) out[key] = value;
+    }
+    return out;
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Payload types
 // ---------------------------------------------------------------------------
 
 /**
  * Fields the n8n public API accepts on POST /api/v1/workflows.
- * `active` and `tags` are NOT accepted here — they have dedicated endpoints:
- *   - POST /api/v1/workflows/{id}/activate
- *   - PUT  /api/v1/workflows/{id}/tags
- * Including extra fields causes "must NOT have additional properties" 422 errors.
+ * Confirmed via n8n docs MCP (2026-06-10).
+ * `active`, `tags`, `parentFolderId` are NOT accepted — use dedicated endpoints or projectId.
+ * `settings` is in required[] — always send it, even as {}.
  */
 interface WorkflowCreatePayload {
   name: string;
   nodes: unknown[];
   connections: Record<string, unknown>;
-  settings?: Record<string, unknown>;
+  settings: Record<string, unknown>;
   staticData?: unknown;
-  parentFolderId?: string | null;
   projectId?: string;
 }
 
@@ -257,16 +273,17 @@ export class N8nClient {
     data: Omit<N8nWorkflow, 'id'>,
     projectId?: string
   ): Promise<N8nWorkflow> {
-    // Whitelist only the fields n8n accepts — extra fields cause 422 validation errors.
-    // `active` and `tags` are set separately after creation via dedicated endpoints.
-    const cleanSettings = sanitizeSettings(data.settings as Record<string, unknown> | undefined);
+    // Whitelist only fields accepted by POST /api/v1/workflows (additionalProperties: false).
+    // - nodes: strip readOnly createdAt/updatedAt from each node object
+    // - settings: always required by schema — send {} if nothing survives sanitization
+    // - parentFolderId: NOT in the POST schema; folder assignment uses projectId only
+    // - active/tags: managed via dedicated endpoints after creation
     const payload: WorkflowCreatePayload = {
       name: data.name,
-      nodes: data.nodes,
+      nodes: sanitizeNodes(data.nodes),
       connections: data.connections,
-      ...(Object.keys(cleanSettings).length > 0 && { settings: cleanSettings }),
+      settings: sanitizeSettings(data.settings as Record<string, unknown> | undefined),
       ...(data.staticData !== undefined && { staticData: data.staticData }),
-      ...(data.parentFolderId !== undefined && { parentFolderId: data.parentFolderId }),
       ...(projectId !== undefined && { projectId }),
     };
     return this.request<N8nWorkflow>('POST', '/api/v1/workflows', payload);
@@ -282,10 +299,8 @@ export class N8nClient {
   async updateWorkflow(id: string, data: Omit<N8nWorkflow, 'id'>): Promise<N8nWorkflow> {
     const payload: WorkflowUpdatePayload = {
       name: data.name,
-      nodes: data.nodes,
+      nodes: sanitizeNodes(data.nodes),
       connections: data.connections,
-      // settings is required by the PUT schema — always send it, even if empty.
-      // sanitizeSettings strips unknown keys and invalid enum values (e.g. 'DEFAULT').
       settings: sanitizeSettings(data.settings as Record<string, unknown> | undefined),
       ...(data.staticData !== undefined && { staticData: data.staticData }),
     };

@@ -252,12 +252,12 @@ describe('N8nClient', () => {
       expect(body).toHaveProperty('name', 'T');
     });
 
-    it('includes parentFolderId when set', async () => {
+    it('never sends parentFolderId — not in POST schema (additionalProperties: false)', async () => {
       mockFetch.mockResolvedValue(
         makeOkResponse({ id: 'wf-new', name: 'T', active: false, nodes: [], connections: {} })
       );
       await client.createWorkflow({ name: 'T', active: false, nodes: [], connections: {}, parentFolderId: 'folder-1' });
-      expect(getLastCallBody()).toHaveProperty('parentFolderId', 'folder-1');
+      expect(getLastCallBody()).not.toHaveProperty('parentFolderId');
     });
 
     it('includes projectId when provided as second argument', async () => {
@@ -266,6 +266,43 @@ describe('N8nClient', () => {
       );
       await client.createWorkflow({ name: 'T', active: false, nodes: [], connections: {} }, 'proj-1');
       expect(getLastCallBody()).toHaveProperty('projectId', 'proj-1');
+    });
+
+    it('always sends settings key on POST (required by schema)', async () => {
+      mockFetch.mockResolvedValue(
+        makeOkResponse({ id: 'wf-new', name: 'T', active: false, nodes: [], connections: {} })
+      );
+      await client.createWorkflow({ name: 'T', active: false, nodes: [], connections: {} });
+      expect(getLastCallBody()).toHaveProperty('settings');
+    });
+
+    it('strips createdAt and updatedAt from nodes on POST', async () => {
+      mockFetch.mockResolvedValue(
+        makeOkResponse({ id: 'wf-new', name: 'T', active: false, nodes: [], connections: {} })
+      );
+      await client.createWorkflow({
+        name: 'T', active: false, connections: {},
+        nodes: [{ id: 'n1', type: 'n8n-nodes-base.start', typeVersion: 1, position: [0, 0], parameters: {}, createdAt: '2026-01-01', updatedAt: '2026-01-02' }],
+      });
+      const body = getLastCallBody();
+      const node = (body.nodes as Record<string, unknown>[])[0];
+      expect(node).not.toHaveProperty('createdAt');
+      expect(node).not.toHaveProperty('updatedAt');
+      expect(node).toHaveProperty('type', 'n8n-nodes-base.start');
+    });
+
+    it('strips createdAt and updatedAt from nodes on PUT', async () => {
+      mockFetch.mockResolvedValue(
+        makeOkResponse({ id: 'wf-1', name: 'T', active: false, nodes: [], connections: {} })
+      );
+      await client.updateWorkflow('wf-1', {
+        name: 'T', active: false, connections: {},
+        nodes: [{ id: 'n1', type: 'n8n-nodes-base.start', typeVersion: 1, position: [0, 0], parameters: {}, createdAt: '2026-01-01', updatedAt: '2026-01-02' }],
+      });
+      const body = getLastCallBody();
+      const node = (body.nodes as Record<string, unknown>[])[0];
+      expect(node).not.toHaveProperty('createdAt');
+      expect(node).not.toHaveProperty('updatedAt');
     });
   });
 
