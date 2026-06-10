@@ -256,6 +256,24 @@ The command always shows a preview table before deleting:
 | `--dry-run` | Show candidates without deleting anything |
 | `-y, --yes` | Skip the confirmation prompt |
 
+#### How the algorithm works
+
+Prune walks snapshots from newest to oldest, keeping track of the last distinct state it has seen. Each snapshot is compared only to that most-recent distinct reference — not to every newer snapshot.
+
+This means a snapshot that looks content-identical to the newest one can still be kept if an intermediate snapshot changed something between them:
+
+```
+#2  9 creds (Airtable present)   ← kept — differs from #3
+#3  8 creds (Airtable removed)   ← kept — differs from #6
+#4  9 creds                      ← pruned (≡ #6)
+#5  9 creds                      ← pruned (≡ #6)
+#6  9 creds (Airtable re-added)  ← kept (newest)
+```
+
+Snapshot #2 is kept even though its content matches #5 and #6 because the algorithm compares it to #3 (the last distinct reference), and they differ — #3 is the snapshot where Airtable was deleted. Pruning #2 would erase the last restore point from before that deletion event.
+
+In short: prune removes consecutive duplicates, not all-time duplicates. Any snapshot that records a genuine state change is always preserved.
+
 ---
 
 ### `flowsave doctor`
