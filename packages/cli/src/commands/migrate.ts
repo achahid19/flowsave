@@ -31,7 +31,7 @@ export function register(program: Command): void {
       const config = loadConfigOrExit();
 
       let passphrase = opts.passphrase;
-      if (!passphrase && config.containerName) {
+      if (!passphrase) {
         const { pass } = await inquirer.prompt<{ pass: string }>([
           {
             type: 'password',
