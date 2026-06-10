@@ -155,6 +155,49 @@ describe('pruneSnapshots', () => {
     expect(index[0].id).toBe(2);
   });
 
+  it('keeps both snapshots when workflows are identical but credentials differ', () => {
+    // Bug fixed: prune was ignoring credential metadata — a snapshot where
+    // credentials changed (e.g. Airtable added) would be incorrectly pruned
+    // because workflows alone looked identical.
+    seedIndex([1, 2]);
+    const wfs = [{ id: 'wf-1', name: 'Same Workflow' }];
+    makeSnapshot(1, wfs);
+    makeSnapshot(2, wfs);
+
+    // Snapshot 1: one credential
+    writeFileSync(
+      join(backupDir, '1', '_credentials.meta.json'),
+      JSON.stringify([{ id: 'c1', name: 'Airtable Key', type: 'airtableTokenApi' }])
+    );
+    // Snapshot 2: two credentials (one added)
+    writeFileSync(
+      join(backupDir, '2', '_credentials.meta.json'),
+      JSON.stringify([
+        { id: 'c1', name: 'Airtable Key', type: 'airtableTokenApi' },
+        { id: 'c2', name: 'Postgres DB', type: 'postgres' },
+      ])
+    );
+
+    const result = pruneSnapshots(config, true);
+    expect(result.removed).toHaveLength(0);
+    expect(result.kept).toEqual([1, 2]);
+  });
+
+  it('prunes when both workflows and credentials are identical', () => {
+    seedIndex([1, 2]);
+    const wfs = [{ id: 'wf-1', name: 'Same Workflow' }];
+    makeSnapshot(1, wfs);
+    makeSnapshot(2, wfs);
+
+    const credMeta = JSON.stringify([{ id: 'c1', name: 'Airtable Key', type: 'airtableTokenApi' }]);
+    writeFileSync(join(backupDir, '1', '_credentials.meta.json'), credMeta);
+    writeFileSync(join(backupDir, '2', '_credentials.meta.json'), credMeta);
+
+    const result = pruneSnapshots(config, true);
+    expect(result.removed).toHaveLength(1);
+    expect(result.removed[0].id).toBe(1);
+  });
+
   it('computes bytesFreed correctly', () => {
     seedIndex([1, 2]);
     const wfs = [{ id: 'wf-1', name: 'Same' }];

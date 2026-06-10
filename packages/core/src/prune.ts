@@ -10,9 +10,9 @@
  *   - Walk backwards. If snapshot[i] is identical to the current reference,
  *     mark it for removal. If different, it becomes the new reference.
  *
- * "Identical" means: diff() returns 0 added, 0 removed, 0 modified.
- * Metadata differences (timestamp, sizeBytes) are ignored — only workflow
- * content matters.
+ * "Identical" means: diff() returns 0 added, 0 removed, 0 modified workflows
+ * AND 0 credential adds/removes (when credential metadata is available).
+ * Metadata differences (timestamp, sizeBytes) are ignored.
  *
  * A snapshot that cannot be diffed (missing files, corrupt) is always kept.
  */
@@ -81,10 +81,14 @@ export function pruneSnapshots(config: FlowsaveConfig, dryRun = false): PruneRes
     let identical = false;
     try {
       const result = diff(current.id, reference.id, config);
+      const credentialsDiffer =
+        result.credentials !== undefined &&
+        (result.credentials.added.length > 0 || result.credentials.removed.length > 0);
       identical =
         result.added.length === 0 &&
         result.removed.length === 0 &&
-        result.modified.length === 0;
+        result.modified.length === 0 &&
+        !credentialsDiffer;
     } catch {
       // Can't diff (corrupt / missing files) — keep it to be safe
       identical = false;
