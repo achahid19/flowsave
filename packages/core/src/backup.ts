@@ -243,7 +243,8 @@ export function readSnapshotDetail(snapshotId: number, config: FlowsaveConfig): 
       } else if (
         entry.endsWith('.json') &&
         entry !== 'meta.json' &&
-        entry !== '_credentials.enc.json'
+        entry !== '_credentials.enc.json' &&
+        entry !== '_credentials.meta.json'
       ) {
         let workflow: N8nWorkflow;
         try {
@@ -355,8 +356,14 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
         'Credential backup requires a passphrase. Provide one or omit containerName to skip credentials.'
       );
     }
-    const encrypted = await exportCredentials(config.containerName, passphrase);
+    const { encrypted, meta } = await exportCredentials(config.containerName, passphrase);
     writeFileSync(join(snapshotPath, '_credentials.enc.json'), encrypted, { mode: 0o600 });
+    // Safe metadata written in plaintext — enables diff without decrypting
+    writeFileSync(
+      join(snapshotPath, '_credentials.meta.json'),
+      JSON.stringify(meta, null, 2),
+      { mode: 0o644 }
+    );
     credentialsIncluded = true;
   }
 

@@ -97,6 +97,17 @@ export interface CredentialMetadata {
   updatedAt?: string;
 }
 
+/**
+ * Safe (non-secret) representation of a credential stored in a snapshot.
+ * Written to _credentials.meta.json alongside the encrypted blob so that
+ * diff can compare what credentials changed without ever decrypting anything.
+ */
+export interface CredentialMeta {
+  id: string;
+  name: string;
+  type: string;
+}
+
 // ---------------------------------------------------------------------------
 // Snapshot
 // ---------------------------------------------------------------------------
@@ -214,6 +225,20 @@ export interface DiffResult {
   modified: WorkflowDiff[];
   /** Number of workflows identical in both snapshots. */
   unchanged: number;
+  /**
+   * Credential-level changes between snapshots. Populated only when at least
+   * one snapshot has a _credentials.meta.json file. Absent when neither snapshot
+   * included a credential backup.
+   *
+   * Scope: added/removed only (matched by ID).
+   * Name and type changes are intentionally not tracked — type changes require
+   * delete+recreate (so they appear as removed+added), and name changes are
+   * low-stakes and undetectable without decrypting the blob.
+   */
+  credentials?: {
+    added: CredentialMeta[];
+    removed: CredentialMeta[];
+  };
 }
 
 // ---------------------------------------------------------------------------

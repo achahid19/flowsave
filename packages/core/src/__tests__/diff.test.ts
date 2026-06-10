@@ -206,4 +206,78 @@ describe('diff', () => {
 
     expect(result.added[0].folderPath).toEqual(['DevOps']);
   });
+
+  // ── Credential diff ────────────────────────────────────────────────────────
+
+  it('credentials is undefined when neither snapshot has _credentials.meta.json', () => {
+    const wf = makeWorkflow('wf-1', 'Alpha');
+    writeSnapshot(homeDir, backupDir, 1, [{ wf }]);
+    writeSnapshot(homeDir, backupDir, 2, [{ wf }]);
+
+    const result = diff(1, 2, config);
+
+    expect(result.credentials).toBeUndefined();
+  });
+
+  it('reports removed credential when it appears in A but not B', () => {
+    const wf = makeWorkflow('wf-1', 'Alpha');
+    writeSnapshot(homeDir, backupDir, 1, [{ wf }]);
+    writeSnapshot(homeDir, backupDir, 2, [{ wf }]);
+
+    const credsA = [{ id: 'cred-1', name: 'My API Key', type: 'httpHeaderAuth' }];
+    writeFileSync(join(backupDir, '1', '_credentials.meta.json'), JSON.stringify(credsA));
+    writeFileSync(join(backupDir, '2', '_credentials.meta.json'), JSON.stringify([]));
+
+    const result = diff(1, 2, config);
+
+    expect(result.credentials?.removed).toHaveLength(1);
+    expect(result.credentials?.removed[0].name).toBe('My API Key');
+    expect(result.credentials?.added).toHaveLength(0);
+  });
+
+  it('reports added credential when it appears in B but not A', () => {
+    const wf = makeWorkflow('wf-1', 'Alpha');
+    writeSnapshot(homeDir, backupDir, 1, [{ wf }]);
+    writeSnapshot(homeDir, backupDir, 2, [{ wf }]);
+
+    writeFileSync(join(backupDir, '1', '_credentials.meta.json'), JSON.stringify([]));
+    const credsB = [{ id: 'cred-2', name: 'Slack Token', type: 'slackOAuth2Api' }];
+    writeFileSync(join(backupDir, '2', '_credentials.meta.json'), JSON.stringify(credsB));
+
+    const result = diff(1, 2, config);
+
+    expect(result.credentials?.added).toHaveLength(1);
+    expect(result.credentials?.added[0].name).toBe('Slack Token');
+    expect(result.credentials?.removed).toHaveLength(0);
+  });
+
+  it('reports unchanged when credential meta is present but identical', () => {
+    const wf = makeWorkflow('wf-1', 'Alpha');
+    writeSnapshot(homeDir, backupDir, 1, [{ wf }]);
+    writeSnapshot(homeDir, backupDir, 2, [{ wf }]);
+
+    const creds = [{ id: 'cred-1', name: 'My API Key', type: 'httpHeaderAuth' }];
+    writeFileSync(join(backupDir, '1', '_credentials.meta.json'), JSON.stringify(creds));
+    writeFileSync(join(backupDir, '2', '_credentials.meta.json'), JSON.stringify(creds));
+
+    const result = diff(1, 2, config);
+
+    expect(result.credentials?.added).toHaveLength(0);
+    expect(result.credentials?.removed).toHaveLength(0);
+  });
+
+  it('treats missing meta in one snapshot as empty list', () => {
+    const wf = makeWorkflow('wf-1', 'Alpha');
+    writeSnapshot(homeDir, backupDir, 1, [{ wf }]);
+    writeSnapshot(homeDir, backupDir, 2, [{ wf }]);
+
+    // Only B has credential metadata
+    const credsB = [{ id: 'cred-1', name: 'My API Key', type: 'httpHeaderAuth' }];
+    writeFileSync(join(backupDir, '2', '_credentials.meta.json'), JSON.stringify(credsB));
+
+    const result = diff(1, 2, config);
+
+    expect(result.credentials?.added).toHaveLength(1);
+    expect(result.credentials?.removed).toHaveLength(0);
+  });
 });

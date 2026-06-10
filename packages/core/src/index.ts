@@ -10,6 +10,7 @@ export type {
   BackupJob,
   BackupJobPayload,
   BackupJobType,
+  CredentialMeta,
   CredentialMetadata,
   DiffResult,
   FieldChange,

@@ -139,7 +139,8 @@ function readWorkflowsFromDisk(snapshotPath: string): WorkflowBackup[] {
       } else if (
         entry.endsWith('.json') &&
         entry !== 'meta.json' &&
-        entry !== '_credentials.enc.json'
+        entry !== '_credentials.enc.json' &&
+        entry !== '_credentials.meta.json'
       ) {
         let workflow: N8nWorkflow;
         try {

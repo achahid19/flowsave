@@ -99,6 +99,10 @@ Shows added, removed, and modified workflows. For modified workflows, shows fiel
 - `active: true → false` — activation toggle
 - `name: "Old" → "New"` — rename
 
+When both snapshots include a credential backup, also shows added and removed credentials by name and type.
+
+> **Note:** Credential diff tracks presence only (added/removed by ID). Renames are not detected — the credential data is encrypted and the name is metadata only. A type change always appears as a remove + add since it requires deleting and recreating the credential in n8n.
+
 ---
 
 ### `flowsave show <id>`

@@ -15,6 +15,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative, sep } from 'path';
 import { getIndexPath } from './config';
 import type {
+  CredentialMeta,
   DiffResult,
   FieldChange,
   FlowsaveConfig,
@@ -82,7 +83,8 @@ function readWorkflows(snapshotPath: string): WorkflowBackup[] {
       } else if (
         entry.endsWith('.json') &&
         entry !== 'meta.json' &&
-        entry !== '_credentials.enc.json'
+        entry !== '_credentials.enc.json' &&
+        entry !== '_credentials.meta.json'
       ) {
         let workflow: N8nWorkflow;
         try {
@@ -135,6 +137,20 @@ function computeChanges(a: N8nWorkflow, b: N8nWorkflow): FieldChange[] {
   return changes;
 }
 
+/**
+ * Read _credentials.meta.json from a snapshot directory.
+ * Returns null when the file doesn't exist (old snapshot or no cred backup).
+ */
+function readCredentialMeta(snapshotPath: string): CredentialMeta[] | null {
+  const metaPath = join(snapshotPath, '_credentials.meta.json');
+  if (!existsSync(metaPath)) return null;
+  try {
+    return JSON.parse(readFileSync(metaPath, 'utf-8')) as CredentialMeta[];
+  } catch {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
@@ -160,6 +176,8 @@ export function diff(
 
   const workflowsA = readWorkflows(pathA);
   const workflowsB = readWorkflows(pathB);
+  const credsA = readCredentialMeta(pathA);
+  const credsB = readCredentialMeta(pathB);
 
   const mapA = new Map(workflowsA.map((w) => [w.id, w]));
   const mapB = new Map(workflowsB.map((w) => [w.id, w]));
@@ -196,6 +214,19 @@ export function diff(
     }
   }
 
+  // Credential diff — only when at least one snapshot has metadata
+  let credentials: DiffResult['credentials'];
+  if (credsA !== null || credsB !== null) {
+    const listA = credsA ?? [];
+    const listB = credsB ?? [];
+    const mapA = new Map(listA.map((c) => [c.id, c]));
+    const mapB = new Map(listB.map((c) => [c.id, c]));
+    credentials = {
+      added:   listB.filter((c) => !mapA.has(c.id)),
+      removed: listA.filter((c) => !mapB.has(c.id)),
+    };
+  }
+
   return {
     snapshotA: snapshotIdA,
     snapshotB: snapshotIdB,
@@ -203,5 +234,6 @@ export function diff(
     removed,
     modified,
     unchanged,
+    credentials,
   };
 }

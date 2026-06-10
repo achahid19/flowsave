@@ -128,5 +128,22 @@ export function renderDiff(result: DiffResult): string {
     lines.push(chalk.gray(`  Unchanged: ${result.unchanged} workflow${result.unchanged !== 1 ? 's' : ''}`));
   }
 
+  // Credential section
+  if (result.credentials) {
+    const { added: credsAdded, removed: credsRemoved } = result.credentials;
+    if (credsAdded.length > 0 || credsRemoved.length > 0) {
+      lines.push('');
+      lines.push(chalk.bold('Credentials'));
+      for (const c of credsAdded) {
+        lines.push(chalk.green(`  + ${c.name}`) + chalk.gray(` (${c.type})`));
+      }
+      for (const c of credsRemoved) {
+        lines.push(chalk.red(`  - ${c.name}`) + chalk.gray(` (${c.type})`));
+      }
+    } else {
+      lines.push(chalk.gray('  Credentials: unchanged'));
+    }
+  }
+
   return lines.join('\n');
 }

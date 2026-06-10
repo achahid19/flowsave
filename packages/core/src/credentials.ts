@@ -23,6 +23,7 @@ import { join } from 'path';
 import { spawnSync } from 'child_process';
 import { randomUUID } from 'crypto';
 import { decrypt, encrypt } from './encrypt';
+import type { CredentialMeta } from './types';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -89,10 +90,17 @@ function tempFileName(prefix: string, ext: string): string {
  * @param passphrase    - Encryption passphrase (never logged or stored)
  * @returns Encrypted credentials buffer ready for writing to _credentials.enc.json
  */
+export interface ExportCredentialsResult {
+  /** AES-256-GCM encrypted credential blob — written to _credentials.enc.json */
+  encrypted: Buffer;
+  /** Safe metadata (id, name, type only — no secrets) — written to _credentials.meta.json */
+  meta: CredentialMeta[];
+}
+
 export async function exportCredentials(
   containerName: string,
   passphrase: string
-): Promise<Buffer> {
+): Promise<ExportCredentialsResult> {
   const containerTmpPath = `/tmp/${tempFileName('flowsave_creds', 'json')}`;
 
   try {
@@ -119,22 +127,29 @@ export async function exportCredentials(
       throw new CredentialError('Credential export produced no output');
     }
 
-    // Step 3: validate JSON before encrypting (catch malformed output early)
+    // Step 3: validate JSON and extract safe metadata (no secrets)
+    let parsed: Array<{ id: string; name: string; type: string }>;
     try {
-      JSON.parse(plaintextBuffer.toString('utf-8'));
+      parsed = JSON.parse(plaintextBuffer.toString('utf-8')) as typeof parsed;
     } catch {
       throw new CredentialError('Credential export output is not valid JSON');
     }
 
+    const meta: CredentialMeta[] = parsed.map((c) => ({
+      id: c.id,
+      name: c.name,
+      type: c.type,
+    }));
+
     // Step 4: encrypt with user's passphrase
-    return encrypt(plaintextBuffer, passphrase);
+    const encrypted = encrypt(plaintextBuffer, passphrase);
+
+    return { encrypted, meta };
   } finally {
     // Always clean up the in-container temp file — even if encrypt() threw
     try {
       runDockerCommand(['exec', containerName, 'rm', '-f', containerTmpPath]);
     } catch {
-      // Log to stderr rather than swallowing silently, but don't re-throw —
-      // the original error (if any) is more important
       process.stderr.write(
         `[flowsave] Warning: could not delete temp file ${containerTmpPath} in container ${containerName}\n`
       );

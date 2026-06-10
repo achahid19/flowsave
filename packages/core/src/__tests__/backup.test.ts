@@ -84,7 +84,10 @@ describe('backup', () => {
     ]);
     mocks.getFolders.mockResolvedValue([]);
     mocks.getVersion.mockResolvedValue('1.0.0');
-    mocks.exportCredentials.mockResolvedValue(Buffer.from('encrypted'));
+    mocks.exportCredentials.mockResolvedValue({
+      encrypted: Buffer.from('encrypted'),
+      meta: [{ id: 'cred-1', name: 'My API Key', type: 'httpHeaderAuth' }],
+    });
   });
 
   afterEach(() => {

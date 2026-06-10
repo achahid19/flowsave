@@ -94,9 +94,17 @@ describe('exportCredentials', () => {
     const result = await exportCredentials('my-n8n', PASSPHRASE);
 
     // Should NOT be the plaintext JSON
-    expect(result.toString()).not.toContain('secret');
+    expect(result.encrypted.toString()).not.toContain('secret');
     // Should be a Buffer larger than the header (60 bytes)
-    expect(result.length).toBeGreaterThan(60);
+    expect(result.encrypted.length).toBeGreaterThan(60);
+  });
+
+  it('returns credential metadata with id, name, type — no secrets', async () => {
+    const result = await exportCredentials('my-n8n', PASSPHRASE);
+
+    expect(result.meta).toHaveLength(1);
+    expect(result.meta[0]).toEqual({ id: 'cred-1', name: 'My API Key', type: 'httpHeaderAuth' });
+    expect(JSON.stringify(result.meta)).not.toContain('secret');
   });
 
   it('cleans up container temp file even if encrypt throws', async () => {
