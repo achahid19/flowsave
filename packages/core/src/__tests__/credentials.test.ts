@@ -212,10 +212,9 @@ describe('importCredentials', () => {
       (c) => Array.isArray(c[1]) && (c[1] as string[]).includes('chmod')
     );
     expect(chmodCall).toBeDefined();
-    const args = chmodCall![1] as string[];
-    expect(args).toContain('--user');
-    expect(args).toContain('root');
-    expect(args).toContain('644');
+    expect(chmodCall?.[1]).toContain('--user');
+    expect(chmodCall?.[1]).toContain('root');
+    expect(chmodCall?.[1]).toContain('644');
   });
 
   it('cleans up container temp file using --user root (docker cp sets owner to root)', async () => {
@@ -230,7 +229,7 @@ describe('importCredentials', () => {
         (c[1] as string[]).includes('root')
     );
     expect(rmCall).toBeDefined();
-    expect(rmCall![1] as string[]).toContain('-f');
+    expect(rmCall?.[1]).toContain('-f');
   });
 
   it('throws EncryptionError if passphrase is wrong', async () => {
@@ -398,8 +397,8 @@ describe('importCredentialsViaApi', () => {
     const [result] = await importCredentialsViaApi(singleCred, PASSPHRASE, mockClient as never);
 
     expect(result.success).toBe(false);
-    expect(result.error!.length).toBeLessThanOrEqual(304); // 300 chars + '…'
-    expect(result.error!.endsWith('…')).toBe(true);
+    expect(result.error?.length ?? 0).toBeLessThanOrEqual(304); // 300 chars + '…'
+    expect(result.error?.endsWith('…')).toBe(true);
   });
 
   it('does not expose the passphrase in error messages', async () => {

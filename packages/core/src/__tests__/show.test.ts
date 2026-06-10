@@ -138,8 +138,8 @@ describe('readSnapshotDetail', () => {
 
     const detail = readSnapshotDetail(id, config);
     expect(detail.credentialMeta).toHaveLength(2);
-    expect(detail.credentialMeta![0].name).toBe('Airtable Key');
-    expect(detail.credentialMeta![1].type).toBe('postgres');
+    expect(detail.credentialMeta?.[0].name).toBe('Airtable Key');
+    expect(detail.credentialMeta?.[1].type).toBe('postgres');
   });
 
   it('returns credentialMeta null when _credentials.meta.json is corrupt', () => {
