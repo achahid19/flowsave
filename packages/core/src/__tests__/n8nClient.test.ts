@@ -16,10 +16,11 @@ import { N8nClient, N8nApiError } from '../n8nClient';
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
-function makeOkResponse(body: unknown, status = 200): Response {
+function makeOkResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return {
     ok: true,
     status,
+    headers: { get: (key: string) => headers[key] ?? null },
     json: () => Promise.resolve(body),
     text: () => Promise.resolve(JSON.stringify(body)),
   } as unknown as Response;
@@ -29,6 +30,7 @@ function makeErrorResponse(status: number, message = 'error'): Response {
   return {
     ok: false,
     status,
+    headers: { get: () => null },
     json: () => Promise.resolve({ message }),
     text: () => Promise.resolve(JSON.stringify({ message })),
   } as unknown as Response;
@@ -432,6 +434,53 @@ describe('N8nClient', () => {
       expect(result).toHaveLength(2);
       expect(result[0].id).toBe('c1');
       expect(result[1].id).toBe('c2');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getVersion
+  // -------------------------------------------------------------------------
+
+  describe('getVersion', () => {
+    it('returns version from GET /api/v1/ body when the endpoint exists', async () => {
+      mockFetch.mockResolvedValue(makeOkResponse({ version: '1.90.0' }));
+      const version = await client.getVersion();
+      expect(version).toBe('1.90.0');
+    });
+
+    it('falls back to X-N8N-Version response header when GET /api/v1/ returns 404', async () => {
+      mockFetch
+        // First call: GET /api/v1/ → 404
+        .mockResolvedValueOnce(makeErrorResponse(404))
+        // Second call: GET /api/v1/workflows?limit=1 → 200 with version header
+        .mockResolvedValueOnce(makeOkResponse({ data: [], nextCursor: null }, 200, { 'X-N8N-Version': '2.18.0' }));
+
+      const version = await client.getVersion();
+      expect(version).toBe('2.18.0');
+    });
+
+    it('uses already-detected version if a prior request captured the header', async () => {
+      // Simulate a prior getWorkflows() call that already captured the header
+      mockFetch.mockResolvedValueOnce(
+        makeOkResponse({ data: [], nextCursor: null }, 200, { 'X-N8N-Version': '2.18.0' })
+      );
+      await client.getWorkflows();
+
+      // Now getVersion() should return the header without an extra request
+      mockFetch.mockResolvedValueOnce(makeErrorResponse(404)); // GET /api/v1/ fails
+      const version = await client.getVersion();
+      expect(version).toBe('2.18.0');
+      // Only 2 fetch calls total: getWorkflows + GET /api/v1/ — no extra fallback call
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('returns "unknown" when all version detection attempts fail', async () => {
+      mockFetch
+        .mockResolvedValueOnce(makeErrorResponse(404))  // GET /api/v1/
+        .mockResolvedValueOnce(makeErrorResponse(401)); // fallback workflows call
+
+      const version = await client.getVersion();
+      expect(version).toBe('unknown');
     });
   });
 
