@@ -227,7 +227,11 @@ flowsave delete 19 14 13 --yes # skip confirmation
 
 ### `flowsave prune`
 
-Scan all local snapshots and remove any whose workflow content is identical to a newer snapshot. Keeps the most recent copy of each distinct state.
+Scan all local snapshots and remove any that are identical to a newer snapshot. Keeps the most recent copy of each distinct state.
+
+Two snapshots are considered identical when all of the following are true:
+- No workflows were added, removed, or modified
+- No credentials were added or removed (compared via `_credentials.meta.json` when available — snapshots without this file are compared on workflows alone)
 
 ```bash
 flowsave prune             # preview + prompt
