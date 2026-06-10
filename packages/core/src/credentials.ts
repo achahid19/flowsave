@@ -63,8 +63,12 @@ function runDockerCommand(args: string[]): Buffer {
     const safeDetails = details.length > 0
       ? ` (docker: ${details.substring(0, 300)})`
       : '';
+    const isPermission = /permission denied|cannot connect|Got permission denied/i.test(details);
+    const permissionHint = isPermission
+      ? ' Your user may not be in the docker group — fix with: sudo usermod -aG docker $USER (then log out and back in).'
+      : '';
     throw new CredentialError(
-      `docker command exited with code ${result.status}${safeDetails}`
+      `docker command exited with code ${result.status}${safeDetails}${permissionHint}`
     );
   }
 

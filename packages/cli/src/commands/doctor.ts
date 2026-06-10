@@ -68,6 +68,34 @@ async function checkInstance(instanceUrl: string, apiKey: string): Promise<Check
 }
 
 function checkDocker(containerName: string): CheckResult {
+  // Step 1: verify docker daemon is reachable without sudo
+  try {
+    execSync('docker info', {
+      encoding: 'utf-8',
+      timeout: 5000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+  } catch (err) {
+    const msg = String(err instanceof Error ? err.message : err);
+    const isPermission = /permission denied|cannot connect|Got permission denied/i.test(msg);
+    if (isPermission) {
+      return {
+        label: 'Docker',
+        detail:
+          'Permission denied — your user is not in the docker group.\n' +
+          '     Fix: sudo usermod -aG docker $USER   (then log out and back in)\n' +
+          '     Until then, credential backup/restore will fail.',
+        ok: false,
+      };
+    }
+    return {
+      label: 'Docker',
+      detail: 'docker command failed — is Docker installed and running?',
+      ok: false,
+    };
+  }
+
+  // Step 2: verify the configured container is actually running
   try {
     const output = execSync(
       `docker ps --filter "name=^/${containerName}$" --format "{{.Names}}"`,
@@ -79,13 +107,13 @@ function checkDocker(containerName: string): CheckResult {
     }
     return {
       label: 'Docker',
-      detail: `Container '${containerName}' not found (is it running?)`,
+      detail: `Container '${containerName}' not found — is it running?`,
       ok: false,
     };
   } catch {
     return {
       label: 'Docker',
-      detail: 'docker command failed — is Docker installed and running?',
+      detail: `Container '${containerName}' not found — is it running?`,
       ok: false,
     };
   }
