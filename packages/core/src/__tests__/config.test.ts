@@ -20,7 +20,18 @@ describe('validateConfig', () => {
     const config = validateConfig(validRaw);
     expect(config.instanceUrl).toBe('http://localhost:5678');
     expect(config.apiKey).toBe('n8n_api_test123');
-    expect(config.gitBranch).toBe('main'); // default
+    // gitBranch is not written when gitRemote is absent — meaningless without a remote
+    expect(config.gitBranch).toBeUndefined();
+  });
+
+  it('defaults gitBranch to "main" when gitRemote is set but gitBranch is not', () => {
+    const config = validateConfig({ ...validRaw, gitRemote: 'git@github.com:user/repo.git' });
+    expect(config.gitBranch).toBe('main');
+  });
+
+  it('does not write gitBranch when gitRemote is absent', () => {
+    const config = validateConfig(validRaw);
+    expect(Object.prototype.hasOwnProperty.call(config, 'gitBranch')).toBe(false);
   });
 
   it('strips trailing slash from instanceUrl', () => {

@@ -113,7 +113,10 @@ export function validateConfig(raw: unknown): FlowsaveConfig {
     ...(obj['containerName'] !== undefined && { containerName: obj['containerName'] as string }),
     backupDir,
     ...(obj['gitRemote'] !== undefined && { gitRemote: obj['gitRemote'] as string }),
-    gitBranch: typeof obj['gitBranch'] === 'string' ? obj['gitBranch'] : 'main',
+    // Only persist gitBranch when gitRemote is also set — a branch without a remote is meaningless
+    ...(obj['gitRemote'] !== undefined && {
+      gitBranch: typeof obj['gitBranch'] === 'string' ? obj['gitBranch'] : 'main',
+    }),
     ...(obj['dashboardToken'] !== undefined && { dashboardToken: obj['dashboardToken'] as string }),
   };
 }
