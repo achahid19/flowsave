@@ -15,7 +15,7 @@ import {
   writeFileSync,
 } from 'fs';
 import { join, relative, resolve, sep } from 'path';
-import { exportCredentials } from './credentials';
+import { exportCredentials, getContainerVersion } from './credentials';
 import { getFlowsaveHome, getIndexPath } from './config';
 import { N8nClient } from './n8nClient';
 import type {
@@ -317,10 +317,12 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
   let completed = false;
   try {
 
-  // 3. Fetch workflows and version in parallel (folders need projectId from workflows first)
+  // 3. Fetch workflows (folders need projectId from workflows first).
+  //    n8n's public API does not expose the instance version — detect it via
+  //    `docker exec n8n --version` when a container is configured.
   const [workflows, n8nVersion] = await Promise.all([
     client.getWorkflows(),
-    client.getVersion(),
+    Promise.resolve(config.containerName ? getContainerVersion(config.containerName) : undefined),
   ]);
 
   // 4. Resolve folder structure.

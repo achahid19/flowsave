@@ -13,7 +13,7 @@
  * - All shell commands use spawnSync with an arg array — no shell injection
  *
  * Docker socket scope:
- * - Used EXCLUSIVELY for `n8n export:credentials` and `n8n import:credentials`
+ * - Used for `n8n export:credentials`, `n8n import:credentials`, and `n8n --version`
  * - Never used for container inspection, image pulling, or any other operation
  */
 
@@ -311,4 +311,25 @@ export async function importCredentialsViaApi(
   }
 
   return results;
+}
+
+// ---------------------------------------------------------------------------
+// Version detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Get the n8n version by running `n8n --version` inside the container.
+ *
+ * n8n's public REST API intentionally does not expose the instance version.
+ * This is the only reliable way to detect it programmatically.
+ *
+ * Returns undefined if the command fails (container unreachable, n8n not in PATH).
+ */
+export function getContainerVersion(containerName: string): string | undefined {
+  const result = spawnSync('docker', ['exec', containerName, 'n8n', '--version'], {
+    encoding: 'utf-8',
+  });
+  if (result.status !== 0 || result.error || !result.stdout) return undefined;
+  const version = result.stdout.trim();
+  return version.length > 0 ? version : undefined;
 }

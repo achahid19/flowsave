@@ -51,7 +51,9 @@ export function register(program: Command): void {
         console.log(chalk.gray('  ' + '─'.repeat(44)));
         console.log(`  ${chalk.cyan('Snapshot ID'.padEnd(20))} ${chalk.white(String(m.snapshotId))}`);
         console.log(`  ${chalk.cyan('Instance'.padEnd(20))} ${chalk.white(m.instanceUrl)}`);
-        console.log(`  ${chalk.cyan('n8n version'.padEnd(20))} ${chalk.white(m.n8nVersion)}`);
+        if (m.n8nVersion) {
+          console.log(`  ${chalk.cyan('n8n version'.padEnd(20))} ${chalk.white(m.n8nVersion)}`);
+        }
         console.log(`  ${chalk.cyan('Timestamp'.padEnd(20))} ${chalk.white(new Date(m.timestamp).toLocaleString())}`);
         console.log(`  ${chalk.cyan('Workflows'.padEnd(20))} ${chalk.white(String(m.workflowCount))}`);
         console.log(`  ${chalk.cyan('Folder structure'.padEnd(20))} ${

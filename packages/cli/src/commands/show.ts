@@ -50,7 +50,9 @@ export function register(program: Command): void {
       console.log(chalk.gray('  ' + '─'.repeat(52)));
       console.log(`  ${chalk.cyan(col('Date', 24))} ${chalk.white(formatDate(meta.timestamp))}`);
       console.log(`  ${chalk.cyan(col('Instance', 24))} ${chalk.white(meta.instanceUrl)}`);
-      console.log(`  ${chalk.cyan(col('n8n version', 24))} ${chalk.white(meta.n8nVersion)}`);
+      if (meta.n8nVersion) {
+        console.log(`  ${chalk.cyan(col('n8n version', 24))} ${chalk.white(meta.n8nVersion)}`);
+      }
       console.log(`  ${chalk.cyan(col('Workflows', 24))} ${chalk.white(String(workflows.length))}`);
       console.log(`  ${chalk.cyan(col('Size', 24))} ${chalk.white(formatBytes(meta.sizeBytes ?? 0))}`);
 

@@ -146,8 +146,12 @@ export interface SnapshotIndexEntry {
 export interface SnapshotMeta {
   snapshotId: number;
   instanceUrl: string;
-  /** n8n version string, or "unknown" if the API did not expose it. */
-  n8nVersion: string;
+  /**
+   * n8n version string detected via `docker exec n8n --version`.
+   * Undefined when no container is configured — n8n's public API does not
+   * expose the version, so it cannot be determined without container access.
+   */
+  n8nVersion?: string;
   timestamp: string; // ISO 8601
   workflowCount: number;
   /** True if _credentials.enc.json is present in this snapshot. */

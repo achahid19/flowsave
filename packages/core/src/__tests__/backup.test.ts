@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   getFolders: vi.fn(),
   getVersion: vi.fn(),
   exportCredentials: vi.fn(),
+  getContainerVersion: vi.fn(),
   getFlowsaveHome: vi.fn(),
 }));
 
@@ -35,6 +36,7 @@ vi.mock('../n8nClient', () => {
 
 vi.mock('../credentials', () => ({
   exportCredentials: mocks.exportCredentials,
+  getContainerVersion: mocks.getContainerVersion,
 }));
 
 vi.mock('../config', async (importOriginal) => {
@@ -84,6 +86,7 @@ describe('backup', () => {
     ]);
     mocks.getFolders.mockResolvedValue([]);
     mocks.getVersion.mockResolvedValue('1.0.0');
+    mocks.getContainerVersion.mockReturnValue('1.0.0');
     mocks.exportCredentials.mockResolvedValue({
       encrypted: Buffer.from('encrypted'),
       meta: [{ id: 'cred-1', name: 'My API Key', type: 'httpHeaderAuth' }],
@@ -125,13 +128,22 @@ describe('backup', () => {
     const meta = JSON.parse(readFileSync(join(backupDir, '1', 'meta.json'), 'utf-8'));
     expect(meta.snapshotId).toBe(1);
     expect(meta.instanceUrl).toBe('http://localhost:5678');
-    expect(meta.n8nVersion).toBe('1.0.0');
+    // No containerName → version not detectable via public API, field omitted
+    expect(meta.n8nVersion).toBeUndefined();
     expect(meta.workflowCount).toBe(1);
     expect(meta.credentialsIncluded).toBe(false);
     expect(typeof meta.timestamp).toBe('string');
     expect(typeof meta.sizeBytes).toBe('number');
     // Folder structure included because default mock returns [] (empty array, not null)
     expect(meta.folderStructureIncluded).toBe(true);
+  });
+
+  it('writes n8nVersion to meta.json when containerName is configured', async () => {
+    const config = { ...baseConfig, backupDir, containerName: 'n8n' };
+    await backup({ config, passphrase: 'pass' });
+
+    const meta = JSON.parse(readFileSync(join(backupDir, '1', 'meta.json'), 'utf-8'));
+    expect(meta.n8nVersion).toBe('1.0.0');
   });
 
   it('writes workflow JSON file at root level when no folder', async () => {
