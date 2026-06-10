@@ -149,4 +149,27 @@ describe('flowsave doctor', () => {
     await expect(program.parseAsync(['node', 'flowsave', 'doctor'])).rejects.toThrow('exit');
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
+
+  it('shows usermod fix hint when docker daemon is inaccessible without sudo', async () => {
+    // Bug fixed: permission denied on `docker info` was showing the same generic
+    // "is Docker installed?" message as a missing daemon — now shows the actionable
+    // usermod fix so users on Linux know exactly how to solve it.
+    mocks.readConfig.mockReturnValue({ ...BASE_CONFIG, containerName: 'n8n' });
+    mocks.execSync.mockImplementation((cmd: string) => {
+      if (String(cmd).startsWith('docker info')) {
+        throw new Error(
+          'Got permission denied while trying to connect to the Docker daemon socket'
+        );
+      }
+      return '';
+    });
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => { throw new Error('exit'); });
+    const program = makeProgram();
+    register(program);
+    await expect(program.parseAsync(['node', 'flowsave', 'doctor'])).rejects.toThrow('exit');
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    const all = output.join('\n');
+    expect(all).toContain('docker group');
+    expect(all).toContain('usermod');
+  });
 });

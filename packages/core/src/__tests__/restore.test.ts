@@ -25,7 +25,10 @@ const mocks = vi.hoisted(() => ({
   activateWorkflow: vi.fn(),
   deactivateWorkflow: vi.fn(),
   updateWorkflowTags: vi.fn(),
+  getCredentials: vi.fn(),
+  deleteCredential: vi.fn(),
   importCredentials: vi.fn(),
+  importCredentialsViaApi: vi.fn(),
   getFlowsaveHome: vi.fn(),
 }));
 
@@ -37,6 +40,8 @@ vi.mock('../n8nClient', () => {
     activateWorkflow = mocks.activateWorkflow;
     deactivateWorkflow = mocks.deactivateWorkflow;
     updateWorkflowTags = mocks.updateWorkflowTags;
+    getCredentials = mocks.getCredentials;
+    deleteCredential = mocks.deleteCredential;
   }
 
   class N8nApiError extends Error {
@@ -53,6 +58,7 @@ vi.mock('../n8nClient', () => {
 
 vi.mock('../credentials', () => ({
   importCredentials: mocks.importCredentials,
+  importCredentialsViaApi: mocks.importCredentialsViaApi,
 }));
 
 vi.mock('../config', async (importOriginal) => {
@@ -68,7 +74,7 @@ vi.mock('../config', async (importOriginal) => {
 
 import { restore, RestoreError } from '../restore';
 import { N8nApiError } from '../n8nClient';
-import type { FlowsaveConfig, SnapshotMeta } from '../types';
+import type { CredentialMeta, FlowsaveConfig, SnapshotMeta } from '../types';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -125,6 +131,15 @@ function writeSnapshot(
   }
 }
 
+/**
+ * Write credential meta alongside the credential blob.
+ * Call after writeSnapshot when the test exercises pruning or API path.
+ */
+function writeCredMeta(backupDir: string, snapshotId: number, meta: CredentialMeta[]): void {
+  const snapshotPath = join(backupDir, String(snapshotId));
+  writeFileSync(join(snapshotPath, '_credentials.meta.json'), JSON.stringify(meta));
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -155,7 +170,10 @@ describe('restore', () => {
     mocks.activateWorkflow.mockResolvedValue(undefined);
     mocks.deactivateWorkflow.mockResolvedValue(undefined);
     mocks.updateWorkflowTags.mockResolvedValue(undefined);
+    mocks.getCredentials.mockResolvedValue([]);
+    mocks.deleteCredential.mockResolvedValue(undefined);
     mocks.importCredentials.mockResolvedValue(undefined);
+    mocks.importCredentialsViaApi.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -338,5 +356,118 @@ describe('restore', () => {
     await restore({ snapshotId: 1, config, forceCreate: true });
 
     expect(mocks.updateWorkflowTags).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // Credential restore — three paths
+  // -------------------------------------------------------------------------
+
+  it('path A: cross-instance without targetContainer calls importCredentialsViaApi, not importCredentials', async () => {
+    const config = { ...baseConfig, backupDir, containerName: 'source-n8n' };
+    writeSnapshot(homeDir, backupDir, 1, [{ name: 'Workflow' }], true);
+    mocks.importCredentialsViaApi.mockResolvedValue([
+      { id: 'c1', name: 'API Key', type: 'httpHeaderAuth', success: true },
+    ]);
+
+    await restore({ snapshotId: 1, config, forceCreate: true, passphrase: 'pass' });
+
+    expect(mocks.importCredentialsViaApi).toHaveBeenCalledOnce();
+    expect(mocks.importCredentials).not.toHaveBeenCalled();
+  });
+
+  it('CRITICAL: cross-instance never uses config.containerName as the target container', async () => {
+    // Bug fixed: cross-instance restore was falling back to config.containerName
+    // which would import credentials into the SOURCE container, not the target.
+    const config = { ...baseConfig, backupDir, containerName: 'source-n8n' };
+    writeSnapshot(homeDir, backupDir, 1, [{ name: 'Workflow' }], true);
+    mocks.importCredentialsViaApi.mockResolvedValue([]);
+
+    await restore({ snapshotId: 1, config, forceCreate: true, passphrase: 'pass' });
+
+    // importCredentials (docker exec path) must NOT have been called with the source container
+    expect(mocks.importCredentials).not.toHaveBeenCalled();
+    // The API path is taken instead — importCredentialsViaApi is called
+    expect(mocks.importCredentialsViaApi).toHaveBeenCalledOnce();
+  });
+
+  it('path A: credentialImportResults are included in the returned Snapshot', async () => {
+    const config = { ...baseConfig, backupDir };
+    writeSnapshot(homeDir, backupDir, 1, [{ name: 'Workflow' }], true);
+    const mockResults = [
+      { id: 'c1', name: 'API Key', type: 'httpHeaderAuth', success: true },
+      { id: 'c2', name: 'OAuth', type: 'oAuth2Api', success: false, error: 'validation error' },
+    ];
+    mocks.importCredentialsViaApi.mockResolvedValue(mockResults);
+
+    const result = await restore({ snapshotId: 1, config, forceCreate: true, passphrase: 'pass' });
+
+    expect(result.credentialImportResults).toEqual(mockResults);
+  });
+
+  it('path B: cross-instance WITH targetContainer calls importCredentials on that container, not source', async () => {
+    const config = { ...baseConfig, backupDir, containerName: 'source-n8n' };
+    writeSnapshot(homeDir, backupDir, 1, [{ name: 'Workflow' }], true);
+
+    await restore({
+      snapshotId: 1,
+      config,
+      forceCreate: true,
+      targetContainerName: 'dest-n8n',
+      passphrase: 'pass',
+    });
+
+    expect(mocks.importCredentials).toHaveBeenCalledOnce();
+    const [calledContainer] = mocks.importCredentials.mock.calls[0] as [string, ...unknown[]];
+    expect(calledContainer).toBe('dest-n8n');
+    expect(calledContainer).not.toBe('source-n8n');
+    expect(mocks.importCredentialsViaApi).not.toHaveBeenCalled();
+  });
+
+  it('path C: same-instance prunes credentials absent from snapshot meta', async () => {
+    // Bug fixed: after importing, stale credentials on the instance were not removed.
+    const config = { ...baseConfig, backupDir, containerName: 'n8n' };
+    writeSnapshot(homeDir, backupDir, 1, [{ name: 'Workflow' }], true);
+    writeCredMeta(backupDir, 1, [{ id: 'c1', name: 'API Key', type: 'httpHeaderAuth' }]);
+
+    mocks.getCredentials.mockResolvedValue([
+      { id: 'c1', name: 'API Key', type: 'httpHeaderAuth' },
+      { id: 'c2', name: 'Stale Cred', type: 'httpHeaderAuth' },
+    ]);
+
+    await restore({ snapshotId: 1, config, passphrase: 'pass' });
+
+    expect(mocks.deleteCredential).toHaveBeenCalledOnce();
+    expect(mocks.deleteCredential).toHaveBeenCalledWith('c2');
+  });
+
+  it('path C: does NOT delete credentials still present in snapshot meta', async () => {
+    const config = { ...baseConfig, backupDir, containerName: 'n8n' };
+    writeSnapshot(homeDir, backupDir, 1, [{ name: 'Workflow' }], true);
+    writeCredMeta(backupDir, 1, [
+      { id: 'c1', name: 'API Key', type: 'httpHeaderAuth' },
+      { id: 'c2', name: 'DB Pass', type: 'postgres' },
+    ]);
+
+    mocks.getCredentials.mockResolvedValue([
+      { id: 'c1', name: 'API Key', type: 'httpHeaderAuth' },
+      { id: 'c2', name: 'DB Pass', type: 'postgres' },
+    ]);
+
+    await restore({ snapshotId: 1, config, passphrase: 'pass' });
+
+    expect(mocks.deleteCredential).not.toHaveBeenCalled();
+  });
+
+  it('path C: skips pruning gracefully when _credentials.meta.json is absent', async () => {
+    // _credentials.meta.json was introduced in the same release as pruning.
+    // Older snapshots won't have it — pruning must be silently skipped.
+    const config = { ...baseConfig, backupDir, containerName: 'n8n' };
+    writeSnapshot(homeDir, backupDir, 1, [{ name: 'Workflow' }], true);
+    // No writeCredMeta call — no meta file
+
+    mocks.getCredentials.mockResolvedValue([{ id: 'c1', name: 'Key', type: 'httpHeaderAuth' }]);
+
+    await expect(restore({ snapshotId: 1, config, passphrase: 'pass' })).resolves.not.toThrow();
+    expect(mocks.deleteCredential).not.toHaveBeenCalled();
   });
 });

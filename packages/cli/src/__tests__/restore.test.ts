@@ -21,7 +21,7 @@ vi.mock('@flowsave/core', () => ({
 
 vi.mock('inquirer', () => ({ default: { prompt: mocks.prompt } }));
 
-import { register } from '../commands/restore';
+import { register, printCredentialImportDetail } from '../commands/restore';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -139,5 +139,74 @@ describe('flowsave restore', () => {
       program.parseAsync(['node', 'flowsave', 'restore', '--snap', '99'])
     ).rejects.toThrow('exit');
     expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// printCredentialImportDetail
+// ---------------------------------------------------------------------------
+
+describe('printCredentialImportDetail', () => {
+  let lines: string[];
+
+  beforeEach(() => {
+    lines = [];
+    vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
+      lines.push(args.map(String).join(' '));
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('shows credential name and type for a successful import', () => {
+    printCredentialImportDetail([
+      { id: 'c1', name: 'API Key', type: 'httpHeaderAuth', success: true },
+    ]);
+    const all = lines.join('\n');
+    expect(all).toContain('API Key');
+    expect(all).toContain('httpHeaderAuth');
+  });
+
+  it('shows credential name and type for a failed import', () => {
+    printCredentialImportDetail([
+      { id: 'c1', name: 'OAuth Token', type: 'oAuth2Api', success: false, error: 'schema error' },
+    ]);
+    const all = lines.join('\n');
+    expect(all).toContain('OAuth Token');
+    expect(all).toContain('oAuth2Api');
+  });
+
+  it('does NOT include per-item error text — only name and type are shown per credential', () => {
+    // Per-item error text was removed because it was too verbose for users.
+    // The raw API schema errors are implementation details, not actionable info.
+    printCredentialImportDetail([
+      { id: 'c1', name: 'OAuth Token', type: 'oAuth2Api', success: false, error: 'very specific schema error message' },
+    ]);
+    const all = lines.join('\n');
+    expect(all).not.toContain('very specific schema error message');
+  });
+
+  it('shows the OAuth / --target-container notice at the bottom when there are failures', () => {
+    printCredentialImportDetail([
+      { id: 'c1', name: 'OAuth Token', type: 'oAuth2Api', success: false, error: 'err' },
+    ]);
+    const all = lines.join('\n');
+    expect(all).toContain('OAuth');
+    expect(all).toContain('--target-container');
+  });
+
+  it('does NOT show the OAuth notice when all credentials succeed', () => {
+    printCredentialImportDetail([
+      { id: 'c1', name: 'API Key', type: 'httpHeaderAuth', success: true },
+      { id: 'c2', name: 'DB Pass', type: 'postgres', success: true },
+    ]);
+    const all = lines.join('\n');
+    expect(all).not.toContain('--target-container');
+  });
+
+  it('handles an empty results array without throwing', () => {
+    expect(() => printCredentialImportDetail([])).not.toThrow();
   });
 });

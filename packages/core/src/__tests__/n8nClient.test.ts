@@ -356,6 +356,86 @@ describe('N8nClient', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Credential API — createCredential, deleteCredential, getCredentials
+  // -------------------------------------------------------------------------
+
+  describe('createCredential', () => {
+    it('uses POST to /api/v1/credentials', async () => {
+      mockFetch.mockResolvedValue(
+        makeOkResponse({ id: 'cred-1', name: 'My Key', type: 'httpHeaderAuth' })
+      );
+      await client.createCredential('My Key', 'httpHeaderAuth', { value: 'secret' });
+      expect(getLastCallMethod()).toBe('POST');
+      expect(getLastCallUrl()).toBe('http://n8n:5678/api/v1/credentials');
+    });
+
+    it('sends name, type, and data in the POST body', async () => {
+      mockFetch.mockResolvedValue(
+        makeOkResponse({ id: 'cred-1', name: 'My Key', type: 'httpHeaderAuth' })
+      );
+      await client.createCredential('My Key', 'httpHeaderAuth', { value: 'secret' });
+      const body = getLastCallBody();
+      expect(body.name).toBe('My Key');
+      expect(body.type).toBe('httpHeaderAuth');
+      expect(body.data).toEqual({ value: 'secret' });
+    });
+
+    it('throws N8nApiError on schema validation failure (400/422)', async () => {
+      mockFetch.mockResolvedValue(makeErrorResponse(400, 'must NOT have additional properties'));
+      await expect(
+        client.createCredential('OAuth', 'oAuth2Api', { internalToken: 'x' })
+      ).rejects.toBeInstanceOf(N8nApiError);
+    });
+  });
+
+  describe('deleteCredential', () => {
+    it('uses DELETE to /api/v1/credentials/:id', async () => {
+      mockFetch.mockResolvedValue(makeOkResponse({}));
+      await client.deleteCredential('cred-1');
+      expect(getLastCallMethod()).toBe('DELETE');
+      expect(getLastCallUrl()).toBe('http://n8n:5678/api/v1/credentials/cred-1');
+    });
+
+    it('URL-encodes the credential ID', async () => {
+      mockFetch.mockResolvedValue(makeOkResponse({}));
+      await client.deleteCredential('cred/special');
+      expect(getLastCallUrl()).toContain('cred%2Fspecial');
+    });
+
+    it('throws N8nApiError on 404', async () => {
+      mockFetch.mockResolvedValue(makeErrorResponse(404, 'Not found'));
+      await expect(client.deleteCredential('missing')).rejects.toBeInstanceOf(N8nApiError);
+    });
+  });
+
+  describe('getCredentials', () => {
+    it('uses GET to /api/v1/credentials', async () => {
+      mockFetch.mockResolvedValue(
+        makeOkResponse({ data: [{ id: 'c1', name: 'API Key', type: 'httpHeaderAuth' }], nextCursor: null })
+      );
+      await client.getCredentials();
+      expect(getLastCallMethod()).toBe('GET');
+      expect(getLastCallUrl()).toContain('/api/v1/credentials');
+    });
+
+    it('returns credential metadata array without secret values', async () => {
+      mockFetch.mockResolvedValue(
+        makeOkResponse({
+          data: [
+            { id: 'c1', name: 'API Key', type: 'httpHeaderAuth' },
+            { id: 'c2', name: 'DB Pass', type: 'postgres' },
+          ],
+          nextCursor: null,
+        })
+      );
+      const result = await client.getCredentials();
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('c1');
+      expect(result[1].id).toBe('c2');
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Error handling
   // -------------------------------------------------------------------------
 
