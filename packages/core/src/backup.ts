@@ -19,6 +19,7 @@ import { exportCredentials } from './credentials';
 import { getFlowsaveHome, getIndexPath } from './config';
 import { N8nClient } from './n8nClient';
 import type {
+  CredentialMeta,
   FlowsaveConfig,
   N8nFolder,
   N8nWorkflow,
@@ -200,6 +201,11 @@ export interface SnapshotDetail {
   workflows: WorkflowBackup[];
   /** True when _credentials.enc.json is present on disk (cross-checks meta). */
   hasCredentials: boolean;
+  /**
+   * Credential metadata from _credentials.meta.json (id, name, type — no secrets).
+   * null when the file is absent (snapshot predates meta file support).
+   */
+  credentialMeta: CredentialMeta[] | null;
   snapshotPath: string;
 }
 
@@ -232,6 +238,16 @@ export function readSnapshotDetail(snapshotId: number, config: FlowsaveConfig): 
 
   const hasCredentials = existsSync(join(snapshotPath, '_credentials.enc.json'));
 
+  const credMetaPath = join(snapshotPath, '_credentials.meta.json');
+  let credentialMeta: CredentialMeta[] | null = null;
+  if (existsSync(credMetaPath)) {
+    try {
+      credentialMeta = JSON.parse(readFileSync(credMetaPath, 'utf-8')) as CredentialMeta[];
+    } catch {
+      credentialMeta = null;
+    }
+  }
+
   const workflows: WorkflowBackup[] = [];
 
   function walk(dir: string): void {
@@ -261,7 +277,7 @@ export function readSnapshotDetail(snapshotId: number, config: FlowsaveConfig): 
 
   walk(snapshotPath);
 
-  return { meta, workflows, hasCredentials, snapshotPath };
+  return { meta, workflows, hasCredentials, credentialMeta, snapshotPath };
 }
 
 // ---------------------------------------------------------------------------

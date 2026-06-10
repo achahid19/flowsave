@@ -43,7 +43,7 @@ export function register(program: Command): void {
         throw err;
       }
 
-      const { meta, workflows, hasCredentials } = detail;
+      const { meta, workflows, hasCredentials, credentialMeta } = detail;
 
       // ── Header ──────────────────────────────────────────────────────────────
       console.log(chalk.bold(`\n  Snapshot #${snapshotId}`));
@@ -53,14 +53,55 @@ export function register(program: Command): void {
       console.log(`  ${chalk.cyan(col('n8n version', 24))} ${chalk.white(meta.n8nVersion)}`);
       console.log(`  ${chalk.cyan(col('Workflows', 24))} ${chalk.white(String(workflows.length))}`);
       console.log(`  ${chalk.cyan(col('Size', 24))} ${chalk.white(formatBytes(meta.sizeBytes ?? 0))}`);
-      console.log(`  ${chalk.cyan(col('Credentials', 24))} ${
-        hasCredentials ? chalk.green('✓ included') : chalk.gray('— not included')
-      }`);
+
+      // Credentials — three states
+      let credLabel: string;
+      if (!hasCredentials) {
+        credLabel = chalk.gray('— not included');
+      } else if (credentialMeta === null) {
+        credLabel = chalk.green('✓ included') + chalk.gray(' (names not available — older snapshot)');
+      } else {
+        credLabel = chalk.green(`✓ included (${credentialMeta.length} credential${credentialMeta.length !== 1 ? 's' : ''})`);
+      }
+      console.log(`  ${chalk.cyan(col('Credentials', 24))} ${credLabel}`);
+
       console.log(`  ${chalk.cyan(col('Folder backup', 24))} ${
         meta.folderStructureIncluded
           ? chalk.green('✓ included')
           : chalk.gray('— not included (community edition)')
       }`);
+
+      // ── Credential table ────────────────────────────────────────────────────
+      if (credentialMeta !== null && credentialMeta.length > 0) {
+        const sorted = credentialMeta.slice().sort((a, b) => a.name.localeCompare(b.name));
+
+        console.log(chalk.bold(`\n  Credentials (${sorted.length})`));
+        console.log(chalk.gray('  ' + '─'.repeat(60)));
+
+        const NAME_MAX = 34;
+        const nameWidth = Math.min(NAME_MAX, Math.max(4, ...sorted.map((c) => c.name.length)));
+
+        console.log(
+          '  ' +
+            chalk.cyan(col('#', 4)) +
+            chalk.cyan(col('Name', nameWidth + 2)) +
+            chalk.cyan('Type')
+        );
+
+        sorted.forEach((cred, i) => {
+          const name = cred.name.length > NAME_MAX
+            ? cred.name.slice(0, NAME_MAX - 1) + '…'
+            : cred.name;
+          console.log(
+            '  ' +
+              chalk.white(col(String(i + 1), 4)) +
+              chalk.white(col(name, nameWidth + 2)) +
+              chalk.gray(cred.type)
+          );
+        });
+
+        console.log(chalk.gray('  ' + '─'.repeat(60)));
+      }
 
       if (workflows.length === 0) {
         console.log(chalk.gray('\n  No workflows in this snapshot.\n'));

@@ -119,6 +119,40 @@ describe('readSnapshotDetail', () => {
     expect(detail.hasCredentials).toBe(false);
   });
 
+  it('returns credentialMeta null when _credentials.meta.json is absent (older snapshot)', () => {
+    seedSnapshot(7, { 'Alpha_Workflow.json': workflowA }, true);
+    // No meta file written — simulates a snapshot from before meta support
+    const detail = readSnapshotDetail(7, config);
+    expect(detail.credentialMeta).toBeNull();
+  });
+
+  it('returns credentialMeta array when _credentials.meta.json is present', () => {
+    const id = 8;
+    seedSnapshot(id, { 'Alpha_Workflow.json': workflowA }, true);
+    const snapDir = join(backupDir, String(id));
+    const meta = [
+      { id: 'c1', name: 'Airtable Key', type: 'airtableTokenApi' },
+      { id: 'c2', name: 'Postgres DB', type: 'postgres' },
+    ];
+    writeFileSync(join(snapDir, '_credentials.meta.json'), JSON.stringify(meta));
+
+    const detail = readSnapshotDetail(id, config);
+    expect(detail.credentialMeta).toHaveLength(2);
+    expect(detail.credentialMeta![0].name).toBe('Airtable Key');
+    expect(detail.credentialMeta![1].type).toBe('postgres');
+  });
+
+  it('returns credentialMeta null when _credentials.meta.json is corrupt', () => {
+    const id = 9;
+    seedSnapshot(id, { 'Alpha_Workflow.json': workflowA }, true);
+    const snapDir = join(backupDir, String(id));
+    writeFileSync(join(snapDir, '_credentials.meta.json'), 'not-valid-json{{{');
+
+    const detail = readSnapshotDetail(id, config);
+    // Corrupt meta degrades gracefully — treat as absent
+    expect(detail.credentialMeta).toBeNull();
+  });
+
   it('reconstructs folderPath from nested directory structure', () => {
     const id = 4;
     const snapDir = join(backupDir, String(id));
