@@ -49,13 +49,23 @@ flowsave restore 3 --to http://new-instance:5678 --api-key <key>
 
 # With credential decryption
 flowsave restore 3 --passphrase <passphrase>
+
+# Cross-instance with credentials via local Docker (handles OAuth and all types)
+flowsave restore 3 --to http://new-instance:5678 --api-key <key> \
+  --target-container n8n-new --passphrase <passphrase>
 ```
 
 | Flag | Description |
 |------|-------------|
 | `--to <url>` | Target instance URL (cross-instance mode) |
 | `--api-key <key>` | Target API key — required when `--to` is used |
+| `--target-container <name>` | Docker container on this machine for cross-instance credential import |
 | `--passphrase <key>` | Passphrase to decrypt backed-up credentials |
+
+**Credential restore behaviour:**
+- **Same-instance** (no `--to`): credentials are imported via `docker exec` into the configured container, then stale credentials absent from the snapshot are automatically deleted.
+- **Cross-instance** (with `--to`): credentials are imported via the n8n REST API — no Docker access required. Simple API-key credentials work reliably. OAuth credentials may fail schema validation (their exported data includes internal token state that the API rejects). Failed credentials are listed by name so you can re-add them manually.
+- **Cross-instance + `--target-container`**: credentials are imported via `docker exec` into the specified container. This handles all credential types including OAuth without schema restrictions.
 
 > **Note:** Cross-instance restore (`--to`) always creates new workflows on the target. Re-running will create duplicates — existing workflows on the target are never updated.
 
@@ -71,13 +81,20 @@ flowsave migrate --to http://new-instance:5678 --api-key <key>
 
 # With credential migration
 flowsave migrate --to http://new-instance:5678 --api-key <key> --passphrase <passphrase>
+
+# With Docker access to the destination (handles OAuth and all credential types)
+flowsave migrate --to http://new-instance:5678 --api-key <key> \
+  --target-container n8n-new --passphrase <passphrase>
 ```
 
 | Flag | Description |
 |------|-------------|
 | `--to <url>` | Destination n8n instance URL *(required)* |
 | `--api-key <key>` | Destination n8n API key *(required)* |
+| `--target-container <name>` | Docker container on this machine for credential import (handles OAuth and all types) |
 | `--passphrase <key>` | Passphrase for credential encryption/decryption |
+
+Credentials are migrated via the n8n REST API by default (no Docker required on the destination). Use `--target-container` if the destination container is locally accessible — that path handles all credential types including OAuth without schema restrictions.
 
 > **Want to restore a specific snapshot to a different instance?**
 > Use `flowsave restore <id> --to <url> --api-key <key>` instead.
@@ -237,7 +254,10 @@ flowsave doctor
 | Feature | Community (free) | Enterprise |
 |---------|-----------------|------------|
 | Workflow backup & restore | ✅ | ✅ |
-| Credential backup & restore | ✅ (via docker exec) | ✅ (via docker exec) |
+| Credential backup (source) | ✅ (requires Docker on source) | ✅ |
+| Credential restore — same-instance | ✅ (docker exec + auto-prune stale) | ✅ |
+| Credential restore — cross-instance (API) | ✅ (simple credentials; OAuth may fail) | ✅ |
+| Credential restore — cross-instance (Docker) | ✅ (requires `--target-container`) | ✅ |
 | Folder structure in backup | ✗ | ✅ |
 | Folder structure on restore | ✗ | ✅ |
 

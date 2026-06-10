@@ -13,7 +13,9 @@ dist/
 .env.*.local
 
 # Claude Code internal files
+.claude/
 CLAUDE.md
+AUDIT.md
 DECISIONS.md
 PHASES.md
 flowsave-product-spec.md

@@ -436,6 +436,23 @@ export class N8nClient {
   }
 
   /**
+   * Create a credential on the target instance via the REST API.
+   * Used for cross-instance restore when Docker access to the target is unavailable.
+   *
+   * Note: `data` must match the schema for the given `type`. If the exported
+   * credential contains internal or computed fields that the API does not accept
+   * (e.g. OAuth token state), the request will fail with a 400 schema error.
+   * Callers must handle this per-credential and report it clearly.
+   */
+  async createCredential(
+    name: string,
+    type: string,
+    data: Record<string, unknown>
+  ): Promise<CredentialMetadata> {
+    return this.request<CredentialMetadata>('POST', '/api/v1/credentials', { name, type, data });
+  }
+
+  /**
    * Delete a credential by ID.
    * Used during same-instance restore to prune stale credentials that are
    * absent from the snapshot's _credentials.meta.json.

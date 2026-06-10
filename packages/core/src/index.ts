@@ -10,6 +10,7 @@ export type {
   BackupJob,
   BackupJobPayload,
   BackupJobType,
+  CredentialImportResult,
   CredentialMeta,
   CredentialMetadata,
   DiffResult,
@@ -46,7 +47,7 @@ export { decrypt, encrypt, EncryptionError } from './encrypt';
 export { N8nApiError, N8nClient } from './n8nClient';
 
 // Credentials
-export { CredentialError, exportCredentials, importCredentials } from './credentials';
+export { CredentialError, exportCredentials, importCredentials, importCredentialsViaApi } from './credentials';
 
 // Backup
 export { backup, BackupError, deleteSnapshot, DeleteError, listSnapshots, readSnapshotDetail, ShowError } from './backup';

@@ -81,6 +81,7 @@ export async function migrate(options: MigrateOptions): Promise<Snapshot> {
     ...snapshot,
     credentialsIncluded: restoreResult.credentialsIncluded,
     folderStructureRestored: restoreResult.folderStructureRestored,
+    credentialImportResults: restoreResult.credentialImportResults,
     warnings: allWarnings.length > 0 ? allWarnings : undefined,
   };
 }

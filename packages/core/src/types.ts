@@ -108,6 +108,24 @@ export interface CredentialMeta {
   type: string;
 }
 
+/**
+ * Per-credential result when credentials are imported via the n8n REST API
+ * (cross-instance restore without local Docker access to the target container).
+ *
+ * The `success` field indicates whether POST /api/v1/credentials succeeded.
+ * `error` is sanitized — it never contains secret values, only the API error
+ * message (e.g. schema validation failures).
+ */
+export interface CredentialImportResult {
+  /** Credential ID on the source instance (not the same on the target). */
+  id: string;
+  name: string;
+  type: string;
+  success: boolean;
+  /** API error message if import failed. Truncated to 300 chars, no secrets. */
+  error?: string;
+}
+
 // ---------------------------------------------------------------------------
 // Snapshot
 // ---------------------------------------------------------------------------
@@ -179,6 +197,12 @@ export interface Snapshot {
    * a restore/migrate. Undefined on backup snapshots or when no folders existed.
    */
   folderStructureRestored?: boolean;
+  /**
+   * Per-credential import results when credentials were imported via the n8n
+   * REST API (cross-instance restore without local Docker access to the target).
+   * Absent when credentials were imported via docker exec or not imported at all.
+   */
+  credentialImportResults?: CredentialImportResult[];
   /**
    * Non-fatal warnings generated during the operation (folder skips, credential
    * skips, activation failures, etc.). The CLI displays these after the spinner

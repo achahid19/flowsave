@@ -21,10 +21,11 @@ import {
   statSync,
 } from 'fs';
 import { join, relative, sep } from 'path';
-import { importCredentials } from './credentials';
+import { importCredentials, importCredentialsViaApi } from './credentials';
 import { getIndexPath } from './config';
 import { N8nClient, N8nApiError } from './n8nClient';
 import type {
+  CredentialImportResult,
   CredentialMeta,
   FlowsaveConfig,
   N8nWorkflow,
@@ -340,54 +341,68 @@ export async function restore(options: RestoreOptions): Promise<Snapshot> {
   }
 
   // 6. Restore credentials if present
+  //
+  // Three paths depending on context:
+  //   A. Cross-instance + no local docker → REST API (importCredentialsViaApi)
+  //   B. Cross-instance + --target-container → docker exec on that container
+  //   C. Same-instance → docker exec + prune stale credentials afterwards
   let credentialsRestored = false;
+  let credentialImportResults: CredentialImportResult[] | undefined;
   const credentialsPath = join(snapshotPath, '_credentials.enc.json');
+
   if (existsSync(credentialsPath)) {
-    // For same-instance restore, fall back to config.containerName.
-    // For cross-instance restore (forceCreate), NEVER fall back to the source
-    // container — that would silently import credentials into the wrong instance.
-    // Cross-instance credential restore requires the user to explicitly provide
-    // --target-container pointing to a locally-accessible Docker container.
+    // For same-instance, fall back to config.containerName.
+    // For cross-instance, NEVER fall back to config.containerName — that is the
+    // SOURCE container and would import into the wrong instance.
     const containerName = forceCreate
       ? (targetContainerName ?? null)
       : (targetContainerName ?? config.containerName);
 
-    if (!containerName) {
-      if (forceCreate) {
-        warnings.push(
-          'Credentials were NOT restored to the target instance. ' +
-          'Cross-instance credential restore requires Docker access to the target container. ' +
-          'If the target container is accessible on this machine, re-run with --target-container <name>. ' +
-          'Otherwise, import credentials manually via the n8n UI on the target instance.'
-        );
-      } else {
-        warnings.push(
-          'Snapshot contains encrypted credentials but no Docker container is configured. ' +
-          'Credential restore was skipped. ' +
-          'Set containerName in your config to restore credentials: flowsave config set containerName <name>'
-        );
-      }
-    } else if (!passphrase) {
+    if (!passphrase) {
       warnings.push(
         'Snapshot contains encrypted credentials but no passphrase was provided. ' +
+        'Credential restore was skipped. Re-run with --passphrase to restore credentials.'
+      );
+    } else if (forceCreate && !containerName) {
+      // ── Path A: cross-instance, no local docker → use REST API ──────────────
+      const encryptedData = readFileSync(credentialsPath);
+      try {
+        const results = await importCredentialsViaApi(encryptedData, passphrase, client);
+        credentialImportResults = results;
+        const succeeded = results.filter((r) => r.success).length;
+        if (succeeded > 0) credentialsRestored = true;
+        // Add a warning for each failed credential so the CLI can surface them
+        for (const r of results.filter((r) => !r.success)) {
+          warnings.push(
+            `Credential "${r.name}" (${r.type}) failed to import via API: ${r.error ?? 'unknown error'}. ` +
+            'Re-add it manually on the target instance.'
+          );
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        warnings.push(`Credential import via API failed entirely: ${message}`);
+      }
+    } else if (!containerName) {
+      // ── Same-instance but no container configured ────────────────────────────
+      warnings.push(
+        'Snapshot contains encrypted credentials but no Docker container is configured. ' +
         'Credential restore was skipped. ' +
-        'Re-run with --passphrase to restore credentials.'
+        'Set containerName in your config: flowsave config set containerName <name>'
       );
     } else {
+      // ── Path B / C: docker exec (cross-instance with explicit container, or same-instance) ──
       const encryptedData = readFileSync(credentialsPath);
       await importCredentials(containerName, encryptedData, passphrase);
       credentialsRestored = true;
 
-      // Prune stale credentials on same-instance restore.
+      // ── Prune stale credentials (same-instance only) ─────────────────────────
+      // `n8n import:credentials` only adds/updates — never removes. After importing,
+      // any credential on the instance absent from the snapshot must be deleted so the
+      // instance faithfully reflects the snapshot state.
       //
-      // `n8n import:credentials` only adds/updates — it never removes. After
-      // importing, any credential that exists on the instance but is absent
-      // from the snapshot must be deleted to faithfully represent the snapshot.
-      //
-      // This is ONLY safe for same-instance restore: credential IDs are stable
-      // on the same instance but differ across instances. On cross-instance
-      // (forceCreate), we skip pruning because the IDs in the snapshot belong
-      // to a different n8n instance and cannot be compared to the target.
+      // Safe only for same-instance (IDs stable). On cross-instance (forceCreate)
+      // with an explicit container, skip pruning — snapshot IDs belong to a different
+      // n8n instance and cannot be matched against the target's IDs.
       const credMetaPath = join(snapshotPath, '_credentials.meta.json');
       if (!forceCreate && existsSync(credMetaPath)) {
         let snapshotMeta: CredentialMeta[] = [];
@@ -399,7 +414,6 @@ export async function restore(options: RestoreOptions): Promise<Snapshot> {
 
         if (snapshotMeta.length >= 0) {
           const snapshotIds = new Set(snapshotMeta.map((c) => c.id));
-
           try {
             const instanceCreds = await client.getCredentials();
             for (const cred of instanceCreds) {
@@ -408,7 +422,7 @@ export async function restore(options: RestoreOptions): Promise<Snapshot> {
                   await client.deleteCredential(cred.id);
                 } catch {
                   warnings.push(
-                    `Could not delete stale credential "${cred.name}" (${cred.id}) — it may need to be removed manually.`
+                    `Could not delete stale credential "${cred.name}" — it may need to be removed manually.`
                   );
                 }
               }
@@ -428,6 +442,7 @@ export async function restore(options: RestoreOptions): Promise<Snapshot> {
     snapshotPath,
     credentialsIncluded: credentialsRestored,
     folderStructureRestored,
+    credentialImportResults,
     warnings: warnings.length > 0 ? warnings : undefined,
   };
 }

@@ -23,7 +23,8 @@ import { join } from 'path';
 import { spawnSync } from 'child_process';
 import { randomUUID } from 'crypto';
 import { decrypt, encrypt } from './encrypt';
-import type { CredentialMeta } from './types';
+import type { N8nClient } from './n8nClient';
+import type { CredentialImportResult, CredentialMeta } from './types';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -239,4 +240,71 @@ export async function importCredentials(
       );
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// API-based import (cross-instance, no Docker access required)
+// ---------------------------------------------------------------------------
+
+/**
+ * Decrypt a credentials blob and import each credential into a target n8n
+ * instance via the REST API (POST /api/v1/credentials).
+ *
+ * This path is used for cross-instance restore when Docker is not available on
+ * the target machine. Credentials travel decrypted in memory and over TLS —
+ * the same security posture as any API call; n8n stores them encrypted on the
+ * other end.
+ *
+ * Known limitation: `n8n export:credentials --decrypted` may include internal
+ * fields (e.g. OAuth token state) that some credential type schemas reject with
+ * `additionalProperties: false`. Each credential is attempted individually and
+ * failures are returned in the result array rather than aborting the whole import.
+ *
+ * @param encryptedData - Buffer from _credentials.enc.json
+ * @param passphrase    - Decryption passphrase (never logged)
+ * @param client        - N8nClient pointed at the target instance
+ * @returns             Per-credential import results
+ */
+export async function importCredentialsViaApi(
+  encryptedData: Buffer,
+  passphrase: string,
+  client: N8nClient
+): Promise<CredentialImportResult[]> {
+  // Step 1: decrypt — throws EncryptionError on wrong passphrase or corruption
+  const plaintext = decrypt(encryptedData, passphrase);
+
+  // Step 2: parse credential array
+  let credentials: Array<Record<string, unknown>>;
+  try {
+    const parsed: unknown = JSON.parse(plaintext.toString('utf-8'));
+    if (!Array.isArray(parsed)) {
+      throw new CredentialError('Credential backup JSON is not an array');
+    }
+    credentials = parsed as Array<Record<string, unknown>>;
+  } catch (err) {
+    if (err instanceof CredentialError) throw err;
+    throw new CredentialError('Credential backup is not valid JSON after decryption');
+  }
+
+  // Step 3: import each credential individually — fail per-item, not all-or-nothing
+  const results: CredentialImportResult[] = [];
+
+  for (const cred of credentials) {
+    const id   = String(cred['id']   ?? '');
+    const name = String(cred['name'] ?? 'unknown');
+    const type = String(cred['type'] ?? '');
+    const data = (cred['data'] ?? {}) as Record<string, unknown>;
+
+    try {
+      await client.createCredential(name, type, data);
+      results.push({ id, name, type, success: true });
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : String(err);
+      // Truncate: API schema errors from n8n are safe, but keep length bounded
+      const error = raw.length > 300 ? raw.substring(0, 300) + '…' : raw;
+      results.push({ id, name, type, success: false, error });
+    }
+  }
+
+  return results;
 }

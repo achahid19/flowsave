@@ -14,9 +14,57 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import type { Command } from 'commander';
 import { restore } from '@flowsave/core';
+import type { CredentialImportResult } from '@flowsave/core';
 import { loadConfigOrExit } from '../utils/config';
 import { handleError } from '../utils/errors';
 import { formatBytes } from '../utils/format';
+
+// ---------------------------------------------------------------------------
+// Credential detail block — shared between restore and migrate
+// ---------------------------------------------------------------------------
+
+/**
+ * Print a verbose per-credential import breakdown.
+ * Called after the summary table when credentials were imported via the API.
+ */
+export function printCredentialImportDetail(results: CredentialImportResult[]): void {
+  const succeeded = results.filter((r) => r.success);
+  const failed    = results.filter((r) => !r.success);
+
+  console.log(chalk.bold('\n  Credential Import Detail'));
+  console.log(chalk.gray('  ' + '─'.repeat(44)));
+
+  for (const r of succeeded) {
+    console.log(
+      `  ${chalk.green('✓')} ${chalk.white(r.name.padEnd(35))} ${chalk.gray(r.type)}`
+    );
+  }
+
+  for (const r of failed) {
+    console.log(
+      `  ${chalk.red('✗')} ${chalk.white(r.name.padEnd(35))} ${chalk.gray(r.type)}`
+    );
+  }
+
+  if (failed.length > 0) {
+    console.log(
+      chalk.yellow(
+        `\n  ⚠  ${failed.length} credential${failed.length !== 1 ? 's' : ''} could not be imported automatically.\n`
+      ) +
+      chalk.gray(
+        '     This usually happens with OAuth credentials because their exported data\n' +
+        '     includes internal token fields that the n8n API schema rejects.\n' +
+        '     You can re-add them manually in the n8n UI on the target instance,\n' +
+        '     or use --target-container if the target container is accessible locally\n' +
+        '     (the Docker path handles all credential types without schema restrictions).'
+      )
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Command
+// ---------------------------------------------------------------------------
 
 export function register(program: Command): void {
   program
@@ -26,9 +74,18 @@ export function register(program: Command): void {
     .option('--snap <id>', 'Snapshot ID (alternative to positional argument)')
     .option('--to <url>', 'Target instance URL for cross-instance restore')
     .option('--api-key <key>', 'Target instance API key for cross-instance restore')
-    .option('--target-container <name>', 'Docker container name on this machine for cross-instance credential import')
+    .option(
+      '--target-container <name>',
+      'Docker container on this machine for cross-instance credential import (handles all types including OAuth)'
+    )
     .option('--passphrase <key>', 'Passphrase to decrypt credentials')
-    .action(async (id: string | undefined, opts: { snap?: string; to?: string; apiKey?: string; targetContainer?: string; passphrase?: string }) => {
+    .action(async (id: string | undefined, opts: {
+      snap?: string;
+      to?: string;
+      apiKey?: string;
+      targetContainer?: string;
+      passphrase?: string;
+    }) => {
       const config = loadConfigOrExit();
 
       const rawId = id ?? opts.snap;
@@ -39,7 +96,6 @@ export function register(program: Command): void {
       }
 
       const snapshotId = parseInt(rawId, 10);
-
       if (isNaN(snapshotId)) {
         console.error(chalk.red(`✗ Invalid snapshot ID: "${rawId}". Must be an integer.`));
         process.exit(1);
@@ -50,14 +106,15 @@ export function register(program: Command): void {
         process.exit(1);
       }
 
-      // Prompt for passphrase if credentials could be restored:
-      // - same-instance: when config has a container
-      // - cross-instance: when --target-container is explicitly provided
-      const willAttemptCredentials = opts.to
-        ? opts.targetContainer !== undefined
-        : config.containerName !== undefined;
+      const isCrossInstance = opts.to !== undefined;
+
+      // Prompt for passphrase when credentials can be restored:
+      //   same-instance  → config has a containerName
+      //   cross-instance → always prompt (API path doesn't need docker;
+      //                    --target-container is optional but passphrase is always needed)
+      const snapshotMayHaveCredentials = isCrossInstance || config.containerName !== undefined;
       let passphrase = opts.passphrase;
-      if (!passphrase && willAttemptCredentials) {
+      if (!passphrase && snapshotMayHaveCredentials) {
         const { pass } = await inquirer.prompt<{ pass: string }>([
           {
             type: 'password',
@@ -70,7 +127,6 @@ export function register(program: Command): void {
       }
 
       const target = opts.to ?? config.instanceUrl;
-      const isCrossInstance = opts.to !== undefined;
       const spinner = ora(`Restoring snapshot ${snapshotId} to ${target}...`).start();
 
       try {
@@ -86,19 +142,25 @@ export function register(program: Command): void {
 
         spinner.succeed(chalk.green('✓ Restore complete'));
 
-        // ── Full summary ─────────────────────────────────────────────────────
+        // ── Summary table ─────────────────────────────────────────────────────
         const m = snapshot.meta;
         const count = snapshot.workflows.length;
+        const results = snapshot.credentialImportResults;
+        const apiSucceeded = results ? results.filter((r) => r.success).length : 0;
+        const apiTotal     = results ? results.length : 0;
+
         console.log(chalk.bold('\n  Restore Summary'));
         console.log(chalk.gray('  ' + '─'.repeat(44)));
         console.log(`  ${chalk.cyan('Snapshot ID'.padEnd(22))} ${chalk.white(String(snapshotId))}`);
         console.log(`  ${chalk.cyan('Source instance'.padEnd(22))} ${chalk.white(m.instanceUrl)}`);
         console.log(`  ${chalk.cyan('Target instance'.padEnd(22))} ${chalk.white(target)}`);
-        console.log(`  ${chalk.cyan('Mode'.padEnd(22))} ${chalk.white(isCrossInstance ? 'cross-instance (always create)' : 'same-instance (update/create)')}`);
+        console.log(`  ${chalk.cyan('Mode'.padEnd(22))} ${chalk.white(
+          isCrossInstance ? 'cross-instance (always create)' : 'same-instance (update/create)'
+        )}`);
         console.log(`  ${chalk.cyan('Workflows restored'.padEnd(22))} ${chalk.white(String(count))}`);
         console.log(`  ${chalk.cyan('Snapshot size'.padEnd(22))} ${chalk.white(formatBytes(m.sizeBytes ?? 0))}`);
 
-        // Folder structure status
+        // Folder structure
         const hadFolders = m.folderStructureIncluded === true;
         if (hadFolders) {
           console.log(`  ${chalk.cyan('Folder structure'.padEnd(22))} ${
@@ -110,15 +172,30 @@ export function register(program: Command): void {
           console.log(`  ${chalk.cyan('Folder structure'.padEnd(22))} ${chalk.gray('— not in snapshot (community backup)')}`);
         }
 
-        // Credentials status
-        const credLabel = snapshot.credentialsIncluded
-          ? chalk.green('✓ decrypted & imported')
-          : isCrossInstance && m.credentialsIncluded
-            ? chalk.yellow('⚠ skipped — no --target-container provided')
-            : chalk.gray('— not restored');
+        // Credentials — different label per path taken
+        let credLabel: string;
+        if (results) {
+          // API path: show count
+          credLabel = apiSucceeded === apiTotal
+            ? chalk.green(`✓ ${apiSucceeded}/${apiTotal} imported via API`)
+            : chalk.yellow(`⚠ ${apiSucceeded}/${apiTotal} imported via API (${apiTotal - apiSucceeded} failed)`);
+        } else if (snapshot.credentialsIncluded) {
+          // Docker path: all-or-nothing success
+          credLabel = chalk.green('✓ decrypted & imported (docker)');
+        } else if (m.credentialsIncluded) {
+          // Snapshot had credentials but they were not imported
+          credLabel = chalk.gray('— skipped (no passphrase or no container)');
+        } else {
+          credLabel = chalk.gray('— snapshot has no credentials');
+        }
         console.log(`  ${chalk.cyan('Credentials'.padEnd(22))} ${credLabel}`);
 
-        // ── Notices ──────────────────────────────────────────────────────────
+        // ── Per-credential detail (API path) ──────────────────────────────────
+        if (results && results.length > 0) {
+          printCredentialImportDetail(results);
+        }
+
+        // ── Notices ───────────────────────────────────────────────────────────
         if (hadFolders && !snapshot.folderStructureRestored) {
           console.log(
             chalk.yellow('\n  ⚠  Folder structure could not be recreated on the target instance.\n') +
@@ -131,17 +208,6 @@ export function register(program: Command): void {
           );
         }
 
-        if (!snapshot.credentialsIncluded && m.credentialsIncluded) {
-          console.log(
-            chalk.yellow('\n  ⚠  Credentials were NOT restored.\n') +
-            chalk.gray(
-              '     The snapshot contains encrypted credentials but they were skipped.\n' +
-              '     Re-run with --passphrase <key> to restore credentials.'
-            )
-          );
-        }
-
-        // ── Cross-instance duplicate notice ──────────────────────────────────
         if (isCrossInstance) {
           console.log(
             chalk.gray(
@@ -153,10 +219,15 @@ export function register(program: Command): void {
           );
         }
 
-        // ── Warnings ─────────────────────────────────────────────────────────
-        if (snapshot.warnings && snapshot.warnings.length > 0) {
+        // ── Non-fatal warnings ────────────────────────────────────────────────
+        // Filter out individual credential failure warnings — those are already
+        // shown in the per-credential detail block above.
+        const nonCredWarnings = (snapshot.warnings ?? []).filter(
+          (w) => !w.startsWith('Credential "') || !w.includes('failed to import via API')
+        );
+        if (nonCredWarnings.length > 0) {
           console.log(chalk.yellow('\n  ⚠  Non-fatal warnings:'));
-          for (const w of snapshot.warnings) {
+          for (const w of nonCredWarnings) {
             console.log(chalk.gray(`     • ${w}`));
           }
         }
