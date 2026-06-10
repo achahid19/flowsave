@@ -57,11 +57,14 @@ flowsave restore 3 --passphrase <passphrase>
 | `--api-key <key>` | Target API key — required when `--to` is used |
 | `--passphrase <key>` | Passphrase to decrypt backed-up credentials |
 
+> **Note:** Cross-instance restore (`--to`) always creates new workflows on the target. Re-running will create duplicates — existing workflows on the target are never updated.
+
 ---
 
 ### `flowsave migrate`
 
-Back up the source instance and restore to a new instance in one command.
+Takes a fresh backup of your **current live instance** and restores it to a new instance in
+one command. Always migrates the current state — not a historical snapshot.
 
 ```bash
 flowsave migrate --to http://new-instance:5678 --api-key <key>
@@ -75,6 +78,11 @@ flowsave migrate --to http://new-instance:5678 --api-key <key> --passphrase <pas
 | `--to <url>` | Destination n8n instance URL *(required)* |
 | `--api-key <key>` | Destination n8n API key *(required)* |
 | `--passphrase <key>` | Passphrase for credential encryption/decryption |
+
+> **Want to restore a specific snapshot to a different instance?**
+> Use `flowsave restore <id> --to <url> --api-key <key>` instead.
+
+> **Note:** Each migration creates new workflows on the destination. Re-running will create duplicates — existing workflows on the destination are never updated. Use `flowsave diff` to compare snapshots before migrating again.
 
 ---
 

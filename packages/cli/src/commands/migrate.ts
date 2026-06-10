@@ -138,6 +138,16 @@ export function register(program: Command): void {
           }
         }
 
+        // ── Duplicate notice ─────────────────────────────────────────────────
+        console.log(
+          chalk.gray(
+            '\n  ℹ  Each migration creates new workflows on the destination.\n' +
+            '     Re-running this command will create duplicates — existing workflows\n' +
+            '     on the destination are never updated or replaced.\n' +
+            '     → Use "flowsave diff" to compare snapshots before migrating again.'
+          )
+        );
+
         // ── Warnings ─────────────────────────────────────────────────────────
         if (snapshot.warnings && snapshot.warnings.length > 0) {
           console.log(chalk.yellow('\n  ⚠  Non-fatal warnings:'));

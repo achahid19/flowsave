@@ -87,7 +87,7 @@ export function register(program: Command): void {
         console.log(`  ${chalk.cyan('Snapshot ID'.padEnd(22))} ${chalk.white(String(snapshotId))}`);
         console.log(`  ${chalk.cyan('Source instance'.padEnd(22))} ${chalk.white(m.instanceUrl)}`);
         console.log(`  ${chalk.cyan('Target instance'.padEnd(22))} ${chalk.white(target)}`);
-        console.log(`  ${chalk.cyan('Mode'.padEnd(22))} ${chalk.white(isCrossInstance ? 'cross-instance (create)' : 'same-instance (update/create)')}`);
+        console.log(`  ${chalk.cyan('Mode'.padEnd(22))} ${chalk.white(isCrossInstance ? 'cross-instance (always create)' : 'same-instance (update/create)')}`);
         console.log(`  ${chalk.cyan('Workflows restored'.padEnd(22))} ${chalk.white(String(count))}`);
         console.log(`  ${chalk.cyan('Snapshot size'.padEnd(22))} ${chalk.white(formatBytes(m.sizeBytes ?? 0))}`);
 
@@ -129,6 +129,18 @@ export function register(program: Command): void {
             chalk.gray(
               '     The snapshot contains encrypted credentials but they were skipped.\n' +
               '     Re-run with --passphrase <key> to restore credentials.'
+            )
+          );
+        }
+
+        // ── Cross-instance duplicate notice ──────────────────────────────────
+        if (isCrossInstance) {
+          console.log(
+            chalk.gray(
+              '\n  ℹ  Cross-instance restore always creates new workflows on the target.\n' +
+              '     Re-running this command will create duplicates — existing workflows\n' +
+              '     on the target are never updated or replaced.\n' +
+              '     → Use "flowsave diff" to compare snapshots before restoring again.'
             )
           );
         }
