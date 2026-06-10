@@ -12,6 +12,21 @@ npm install -g flowsave
 
 Requires Node.js ≥ 18. Your n8n instance must be reachable from the machine running Flowsave.
 
+### Docker requirement (credential backup only)
+
+Credential backup and restore use `docker exec` to call the n8n CLI inside the container. Docker must be accessible **without `sudo`** from the user running Flowsave.
+
+On Linux, Docker requires root by default. Add your user to the `docker` group once:
+
+```bash
+sudo usermod -aG docker $USER
+# then log out and back in for the change to take effect
+```
+
+On macOS with Docker Desktop this is not required — Docker Desktop runs as the current user.
+
+Run `flowsave doctor` at any time to verify your Docker setup.
+
 ## Quick start
 
 ```bash
