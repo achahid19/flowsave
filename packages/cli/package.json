@@ -1,6 +1,6 @@
 {
   "name": "flowsave-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Backup, restore, and migrate your n8n instance",
   "keywords": ["n8n", "backup", "restore", "migrate", "cli", "automation", "self-hosted"],
   "license": "LicenseRef-Elastic-2.0",
