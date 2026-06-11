@@ -171,7 +171,16 @@ Push the latest snapshot to the configured Git remote.
 flowsave push
 ```
 
-Requires `gitRemote` to be set in your config (`flowsave config set gitRemote <url>`). Credentials files are excluded from git automatically.
+Requires `gitRemote` to be set in your config:
+
+```bash
+flowsave config set gitRemote git@github.com:you/n8n-backups.git
+flowsave config set gitBranch backups   # optional, defaults to main
+```
+
+- The remote repository does not need to exist beforehand — Flowsave initializes a local git repo on first push and creates the remote branch automatically.
+- Encrypted credential files (`_credentials.enc.json`) are excluded from git via `.gitignore`. Only workflow JSON and snapshot metadata are committed.
+- The commit message includes the snapshot ID and timestamp: `chore: flowsave backup <timestamp> snapshot-<id>`.
 
 ---
 
