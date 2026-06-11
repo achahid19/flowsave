@@ -137,24 +137,23 @@ export async function pushToGit(
   const staged = spawnSync('git', ['diff', '--cached', '--quiet'], {
     cwd: repoDir,
   });
-  // exit 0 = nothing staged, exit 1 = staged changes present
-  if (staged.status === 0) {
-    return;
+  // exit 1 = staged changes present → commit them; exit 0 = already committed
+  if (staged.status !== 0) {
+    // Configure a minimal git identity if not set (CI / fresh environments)
+    const nameCheck = spawnSync('git', ['config', 'user.name'], {
+      cwd: repoDir,
+      encoding: 'utf-8',
+    });
+    if (!nameCheck.stdout?.trim()) {
+      runGit(['config', 'user.name', 'Flowsave'], { cwd: repoDir });
+      runGit(['config', 'user.email', 'flowsave@localhost'], { cwd: repoDir });
+    }
+
+    runGit(['commit', '-m', message], { cwd: repoDir });
   }
 
-  // Configure a minimal git identity if not set (CI / fresh environments)
-  const nameCheck = spawnSync('git', ['config', 'user.name'], {
-    cwd: repoDir,
-    encoding: 'utf-8',
-  });
-  if (!nameCheck.stdout?.trim()) {
-    runGit(['config', 'user.name', 'Flowsave'], { cwd: repoDir });
-    runGit(['config', 'user.email', 'flowsave@localhost'], { cwd: repoDir });
-  }
-
-  runGit(['commit', '-m', message], { cwd: repoDir });
-
-  // 4. Push to remote — HEAD:<branch> works regardless of local branch name
-  //    (the repo may have been initialized on 'master' before this config was set)
+  // 4. Always push — even when nothing new to commit, the branch or remote
+  //    may have changed and the ref needs to be updated on the remote.
+  //    HEAD:<branch> works regardless of local branch name.
   runGit(['push', '-u', 'origin', `HEAD:${branch}`], { cwd: repoDir });
 }
