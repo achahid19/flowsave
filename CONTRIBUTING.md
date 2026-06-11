@@ -7,7 +7,7 @@ git clone https://github.com/achahid19/flowsave.git
 cd flowsave
 pnpm install          # install all workspace dependencies
 pnpm build            # compile core + cli packages
-npm install -g packages/cli   # install flowsave binary globally
+npm install -g $(pwd)/packages/cli   # install flowsave-cli binary globally
 flowsave --help       # verify the install
 ```
 
