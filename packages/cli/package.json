@@ -2,6 +2,13 @@
   "name": "flowsave-cli",
   "version": "0.1.0",
   "description": "Backup, restore, and migrate your n8n instance",
+  "keywords": ["n8n", "backup", "restore", "migrate", "cli", "automation", "self-hosted"],
+  "license": "LicenseRef-Elastic-2.0",
+  "homepage": "https://github.com/achahid19/flowsave#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/achahid19/flowsave.git"
+  },
   "main": "./dist/index.js",
   "bin": {
     "flowsave": "./dist/index.js"
@@ -17,15 +24,14 @@
     "test": "vitest run --reporter=verbose",
     "lint": "eslint src --ext .ts"
   },
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
+    "@flowsave/core": "workspace:*",
     "chalk": "^4.1.2",
     "cli-table3": "^0.6.5",
     "commander": "^12.0.0",
     "inquirer": "^8.2.6",
-    "ora": "^5.4.1"
-  },
-  "devDependencies": {
-    "@flowsave/core": "workspace:*",
+    "ora": "^5.4.1",
     "@types/inquirer": "^8.2.10",
     "@types/node": "^20.0.0",
     "tsup": "^8.5.1",
