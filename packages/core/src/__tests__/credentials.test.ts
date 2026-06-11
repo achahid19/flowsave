@@ -18,7 +18,7 @@ import { encrypt } from '../encrypt';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const PASSPHRASE = 'test-passphrase-1234';
+const PASSPHRASE = 'Test-Passphrase-1234';
 const SAMPLE_CREDS_JSON = JSON.stringify([
   { id: 'cred-1', name: 'My API Key', type: 'httpHeaderAuth', data: { value: 'secret' } },
 ]);

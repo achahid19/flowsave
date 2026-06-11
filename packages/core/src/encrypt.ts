@@ -37,6 +37,8 @@ const SCRYPT_MAXMEM = 64 * 1024 * 1024; // Explicit 64 MB cap — avoids system-
 
 const HEADER_LENGTH = SALT_LENGTH + IV_LENGTH + TAG_LENGTH; // 60 bytes
 
+export const MIN_PASSPHRASE_LENGTH = 12;
+
 // ---------------------------------------------------------------------------
 // Errors
 // ---------------------------------------------------------------------------
@@ -46,6 +48,43 @@ export class EncryptionError extends Error {
     super(message);
     this.name = 'EncryptionError';
   }
+}
+
+// ---------------------------------------------------------------------------
+// Passphrase validation
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate a passphrase against the minimum strength policy.
+ *
+ * Returns an error message string if the passphrase is too weak,
+ * or null if it passes. Exported so CLI prompts can surface inline
+ * feedback via inquirer's validate option before encryption is attempted.
+ *
+ * Rules:
+ *   - At least MIN_PASSPHRASE_LENGTH characters (12)
+ *   - Must not be all whitespace
+ *   - At least one uppercase letter
+ *   - At least one lowercase letter
+ *   - At least one digit or special character
+ */
+export function validatePassphrase(passphrase: string): string | null {
+  if (passphrase.trim().length === 0) {
+    return 'Passphrase must not be blank';
+  }
+  if (passphrase.length < MIN_PASSPHRASE_LENGTH) {
+    return `Passphrase must be at least ${MIN_PASSPHRASE_LENGTH} characters`;
+  }
+  if (!/[A-Z]/.test(passphrase)) {
+    return 'Passphrase must contain at least one uppercase letter';
+  }
+  if (!/[a-z]/.test(passphrase)) {
+    return 'Passphrase must contain at least one lowercase letter';
+  }
+  if (!/[0-9!@#$%^&*()\-_=+[\]{};:'",.<>/?\\|`~]/.test(passphrase)) {
+    return 'Passphrase must contain at least one digit or special character';
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -80,8 +119,9 @@ export function encrypt(plaintext: Buffer, passphrase: string): Buffer {
   if (plaintext.length === 0) {
     throw new EncryptionError('Cannot encrypt empty plaintext');
   }
-  if (passphrase.length === 0) {
-    throw new EncryptionError('Passphrase must not be empty');
+  const passphraseError = validatePassphrase(passphrase);
+  if (passphraseError) {
+    throw new EncryptionError(passphraseError);
   }
 
   const salt = randomBytes(SALT_LENGTH);

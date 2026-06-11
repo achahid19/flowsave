@@ -41,7 +41,7 @@ export {
 } from './config';
 
 // Encryption
-export { decrypt, encrypt, EncryptionError } from './encrypt';
+export { decrypt, encrypt, EncryptionError, MIN_PASSPHRASE_LENGTH, validatePassphrase } from './encrypt';
 
 // n8n API client
 export { N8nApiError, N8nClient } from './n8nClient';

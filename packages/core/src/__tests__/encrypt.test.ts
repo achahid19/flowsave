@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { decrypt, encrypt, EncryptionError } from '../encrypt';
+import { decrypt, encrypt, EncryptionError, MIN_PASSPHRASE_LENGTH, validatePassphrase } from '../encrypt';
 
 describe('encrypt / decrypt', () => {
-  const passphrase = 'correct-horse-battery-staple';
+  const passphrase = 'Correct-Horse-Battery-1';
   const plaintext = Buffer.from(JSON.stringify({ secret: 'my-api-key' }));
 
   it('round-trips plaintext correctly', () => {
@@ -39,8 +39,8 @@ describe('encrypt / decrypt', () => {
     expect(() => encrypt(Buffer.alloc(0), passphrase)).toThrow(EncryptionError);
   });
 
-  it('throws EncryptionError for empty passphrase on encrypt', () => {
-    expect(() => encrypt(plaintext, '')).toThrow(EncryptionError);
+  it('throws EncryptionError for weak passphrase on encrypt', () => {
+    expect(() => encrypt(plaintext, 'weak')).toThrow(EncryptionError);
   });
 
   it('throws EncryptionError for empty passphrase on decrypt', () => {
@@ -59,5 +59,46 @@ describe('encrypt / decrypt', () => {
     const ciphertext = encrypt(binary, passphrase);
     const result = decrypt(ciphertext, passphrase);
     expect(result.toString('hex')).toBe(binary.toString('hex'));
+  });
+});
+
+describe('validatePassphrase', () => {
+  it('returns null for a valid passphrase', () => {
+    expect(validatePassphrase('Correct-Horse-Battery-1')).toBeNull();
+  });
+
+  it(`rejects passphrases shorter than ${MIN_PASSPHRASE_LENGTH} characters`, () => {
+    expect(validatePassphrase('Short1!')).not.toBeNull();
+  });
+
+  it('rejects all-whitespace input', () => {
+    expect(validatePassphrase('            ')).not.toBeNull();
+  });
+
+  it('rejects passphrases with no uppercase letter', () => {
+    expect(validatePassphrase('no-uppercase-here-1!')).not.toBeNull();
+  });
+
+  it('rejects passphrases with no lowercase letter', () => {
+    expect(validatePassphrase('NO-LOWERCASE-HERE-1!')).not.toBeNull();
+  });
+
+  it('rejects passphrases with no digit or special character', () => {
+    expect(validatePassphrase('NoDigitOrSpecialHere')).not.toBeNull();
+  });
+
+  it('accepts a passphrase with a digit instead of a special character', () => {
+    expect(validatePassphrase('CorrectHorseBattery1')).toBeNull();
+  });
+
+  it('accepts a passphrase with a special character instead of a digit', () => {
+    expect(validatePassphrase('Correct-Horse-Battery!')).toBeNull();
+  });
+
+  it('returns the specific rule that failed', () => {
+    expect(validatePassphrase('short')).toMatch(/at least 12/);
+    expect(validatePassphrase('no-uppercase-here-1!')).toMatch(/uppercase/);
+    expect(validatePassphrase('NO-LOWERCASE-1!')).toMatch(/lowercase/);
+    expect(validatePassphrase('NoDigitOrSpecialHere')).toMatch(/digit or special/);
   });
 });
