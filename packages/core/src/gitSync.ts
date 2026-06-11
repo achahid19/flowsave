@@ -154,6 +154,7 @@ export async function pushToGit(
 
   runGit(['commit', '-m', message], { cwd: repoDir });
 
-  // 4. Push to remote
-  runGit(['push', '-u', 'origin', branch], { cwd: repoDir });
+  // 4. Push to remote — HEAD:<branch> works regardless of local branch name
+  //    (the repo may have been initialized on 'master' before this config was set)
+  runGit(['push', '-u', 'origin', `HEAD:${branch}`], { cwd: repoDir });
 }
