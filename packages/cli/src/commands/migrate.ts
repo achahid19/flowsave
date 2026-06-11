@@ -16,7 +16,7 @@ import ora from 'ora';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import type { Command } from 'commander';
-import { migrate } from '@flowsave/core';
+import { migrate, validatePassphrase } from '@flowsave/core';
 import { loadConfigOrExit } from '../utils/config';
 import { handleError } from '../utils/errors';
 import { formatBytes } from '../utils/format';
@@ -37,18 +37,43 @@ export function register(program: Command): void {
       const config = loadConfigOrExit();
 
       // Always prompt for passphrase — migrate always attempts credentials
-      // (either via docker on the source for backup, or via API for restore)
+      // (either via docker on the source for backup, or via API for restore).
+      //
+      // NOTE: migrate creates a FRESH backup — the passphrase is not validated
+      // against any prior encryption; it sets new encryption for this snapshot.
+      // Require confirmation when entered interactively to prevent throwaway passphrases
+      // from permanently locking the snapshot's credentials.
       let passphrase = opts.passphrase;
       if (!passphrase) {
         const { pass } = await inquirer.prompt<{ pass: string }>([
           {
             type: 'password',
             name: 'pass',
-            message: 'Passphrase for credential migration (leave blank to skip credentials):',
+            message: 'Set a passphrase to encrypt migrated credentials (leave blank to skip):',
             mask: '*',
+            validate: (input: string) => {
+              const trimmed = input.trim();
+              if (!trimmed) return true;
+              return validatePassphrase(trimmed) ?? true;
+            },
           },
         ]);
         passphrase = pass.trim() || undefined;
+
+        if (passphrase) {
+          const { confirm } = await inquirer.prompt<{ confirm: string }>([
+            {
+              type: 'password',
+              name: 'confirm',
+              message: 'Confirm passphrase:',
+              mask: '*',
+            },
+          ]);
+          if (confirm.trim() !== passphrase) {
+            console.error(chalk.red('\n  ✖  Passphrases do not match. Migration aborted.'));
+            process.exit(1);
+          }
+        }
       }
 
       const spinner = ora('Step 1/2: Backing up source instance...').start();
@@ -85,7 +110,9 @@ export function register(program: Command): void {
         console.log(`  ${chalk.cyan('Snapshot ID'.padEnd(22))} ${chalk.white(String(snapshot.id))}`);
         console.log(`  ${chalk.cyan('Source instance'.padEnd(22))} ${chalk.white(m.instanceUrl)}`);
         console.log(`  ${chalk.cyan('Destination'.padEnd(22))} ${chalk.white(opts.to)}`);
-        console.log(`  ${chalk.cyan('n8n version (source)'.padEnd(22))} ${chalk.white(m.n8nVersion)}`);
+        if (m.n8nVersion) {
+          console.log(`  ${chalk.cyan('n8n version (source)'.padEnd(22))} ${chalk.white(m.n8nVersion)}`);
+        }
         console.log(`  ${chalk.cyan('Workflows migrated'.padEnd(22))} ${chalk.white(String(count))}`);
         console.log(`  ${chalk.cyan('Snapshot size'.padEnd(22))} ${chalk.white(formatBytes(m.sizeBytes ?? 0))}`);
 
@@ -123,6 +150,21 @@ export function register(program: Command): void {
         // ── Per-credential detail (API path) ──────────────────────────────────
         if (results && results.length > 0) {
           printCredentialImportDetail(results);
+        }
+
+        // ── Passphrase retention reminder ─────────────────────────────────────
+        // Remind the user that the snapshot's credentials are encrypted with the
+        // passphrase they just set — there is no way to recover it from disk.
+        const credWereMigrated =
+          snapshot.credentialsIncluded || (results !== undefined && results.some((r) => r.success));
+        if (passphrase && credWereMigrated) {
+          console.log(
+            chalk.yellow(`\n  ⚠  Credentials in snapshot #${snapshot.id} are encrypted with the passphrase you entered.\n`) +
+            chalk.gray(
+              '     Keep it safe — it will be required to restore credentials\n' +
+              `     from this snapshot later (e.g. flowsave restore ${snapshot.id} --passphrase <your-passphrase>).`
+            )
+          );
         }
 
         // ── Notices ───────────────────────────────────────────────────────────

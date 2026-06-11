@@ -12,7 +12,7 @@ import ora from 'ora';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import type { Command } from 'commander';
-import { backup } from '@flowsave/core';
+import { backup, validatePassphrase } from '@flowsave/core';
 import { loadConfigOrExit } from '../utils/config';
 import { handleError } from '../utils/errors';
 import { formatBytes } from '../utils/format';
@@ -24,18 +24,41 @@ export function register(program: Command): void {
     .action(async () => {
       const config = loadConfigOrExit();
 
-      // Prompt for passphrase only when credential backup is possible
+      // Prompt for passphrase only when credential backup is possible.
+      // Require confirmation when a passphrase is entered — there is no stored
+      // "correct" passphrase to validate against; the user is setting new encryption
+      // for this snapshot, and forgetting it means credentials cannot be restored.
       let passphrase: string | undefined;
       if (config.containerName) {
         const { pass } = await inquirer.prompt<{ pass: string }>([
           {
             type: 'password',
             name: 'pass',
-            message: `Passphrase to encrypt credentials for container "${config.containerName}" (leave blank to skip):`,
+            message: `Set a passphrase to encrypt credentials (leave blank to skip):`,
             mask: '*',
+            validate: (input: string) => {
+              const trimmed = input.trim();
+              if (!trimmed) return true; // blank = skip credentials, no validation needed
+              return validatePassphrase(trimmed) ?? true;
+            },
           },
         ]);
         passphrase = pass.trim() || undefined;
+
+        if (passphrase) {
+          const { confirm } = await inquirer.prompt<{ confirm: string }>([
+            {
+              type: 'password',
+              name: 'confirm',
+              message: 'Confirm passphrase:',
+              mask: '*',
+            },
+          ]);
+          if (confirm.trim() !== passphrase) {
+            console.error(chalk.red('\n  ✖  Passphrases do not match. Backup aborted.'));
+            process.exit(1);
+          }
+        }
       }
 
       const spinner = ora(`Connecting to ${config.instanceUrl}...`).start();
@@ -82,7 +105,15 @@ export function register(program: Command): void {
           );
         }
 
-        if (!m.credentialsIncluded && config.containerName) {
+        if (m.credentialsIncluded && passphrase) {
+          console.log(
+            chalk.yellow(`\n  ⚠  Credentials in snapshot #${m.snapshotId} are encrypted with the passphrase you entered.\n`) +
+            chalk.gray(
+              '     Keep it safe — it will be required to restore credentials\n' +
+              `     from this snapshot later (e.g. flowsave restore ${m.snapshotId} --passphrase <your-passphrase>).`
+            )
+          );
+        } else if (!m.credentialsIncluded && config.containerName) {
           console.log(
             chalk.gray('\n  ℹ  Credentials were skipped (no passphrase entered).')
           );

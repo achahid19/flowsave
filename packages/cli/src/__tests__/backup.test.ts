@@ -75,28 +75,45 @@ describe('flowsave backup', () => {
     });
   });
 
-  it('prompts for passphrase when containerName is set', async () => {
+  it('prompts for passphrase and confirmation when containerName is set', async () => {
     mocks.readConfig.mockReturnValue({ ...BASE_CONFIG, containerName: 'n8n' });
-    mocks.prompt.mockResolvedValue({ pass: 'mypass' });
+    mocks.prompt
+      .mockResolvedValueOnce({ pass: 'mypass' })
+      .mockResolvedValueOnce({ confirm: 'mypass' });
     const program = makeProgram();
     register(program);
     await program.parseAsync(['node', 'flowsave', 'backup']);
-    expect(mocks.prompt).toHaveBeenCalled();
+    expect(mocks.prompt).toHaveBeenCalledTimes(2);
     expect(mocks.backup).toHaveBeenCalledWith({
       config: expect.objectContaining({ containerName: 'n8n' }),
       passphrase: 'mypass',
     });
   });
 
-  it('treats blank passphrase input as undefined', async () => {
+  it('treats blank passphrase input as undefined and skips confirmation', async () => {
     mocks.readConfig.mockReturnValue({ ...BASE_CONFIG, containerName: 'n8n' });
-    mocks.prompt.mockResolvedValue({ pass: '   ' });
+    mocks.prompt.mockResolvedValueOnce({ pass: '   ' });
     const program = makeProgram();
     register(program);
     await program.parseAsync(['node', 'flowsave', 'backup']);
+    expect(mocks.prompt).toHaveBeenCalledTimes(1);
     expect(mocks.backup).toHaveBeenCalledWith(
       expect.objectContaining({ passphrase: undefined })
     );
+  });
+
+  it('exits 1 when passphrase confirmation does not match', async () => {
+    mocks.readConfig.mockReturnValue({ ...BASE_CONFIG, containerName: 'n8n' });
+    mocks.prompt
+      .mockResolvedValueOnce({ pass: 'secret' })
+      .mockResolvedValueOnce({ confirm: 'wrong' });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => { throw new Error('exit'); });
+    const program = makeProgram();
+    register(program);
+    await expect(program.parseAsync(['node', 'flowsave', 'backup'])).rejects.toThrow('exit');
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(mocks.backup).not.toHaveBeenCalled();
   });
 
   it('exits 1 when backup() throws', async () => {

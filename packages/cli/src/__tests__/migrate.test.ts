@@ -110,4 +110,56 @@ describe('flowsave migrate', () => {
     ).rejects.toThrow('exit');
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
+
+  it('prompts for confirmation when passphrase is non-empty and proceeds on match', async () => {
+    mocks.prompt
+      .mockResolvedValueOnce({ pass: 'secret' })
+      .mockResolvedValueOnce({ confirm: 'secret' });
+    const program = makeProgram();
+    register(program);
+    await program.parseAsync([
+      'node', 'flowsave', 'migrate',
+      '--to', 'http://dest:5678',
+      '--api-key', 'dest-key',
+    ]);
+    expect(mocks.prompt).toHaveBeenCalledTimes(2);
+    expect(mocks.migrate).toHaveBeenCalledWith(
+      expect.objectContaining({ passphrase: 'secret' })
+    );
+  });
+
+  it('exits 1 when passphrase confirmation does not match', async () => {
+    mocks.prompt
+      .mockResolvedValueOnce({ pass: 'secret' })
+      .mockResolvedValueOnce({ confirm: 'wrong' });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => { throw new Error('exit'); });
+    const program = makeProgram();
+    register(program);
+    await expect(
+      program.parseAsync([
+        'node', 'flowsave', 'migrate',
+        '--to', 'http://dest:5678',
+        '--api-key', 'dest-key',
+      ])
+    ).rejects.toThrow('exit');
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(mocks.migrate).not.toHaveBeenCalled();
+  });
+
+  it('skips confirmation when passphrase provided via --passphrase flag', async () => {
+    const program = makeProgram();
+    register(program);
+    await program.parseAsync([
+      'node', 'flowsave', 'migrate',
+      '--to', 'http://dest:5678',
+      '--api-key', 'dest-key',
+      '--passphrase', 'secret',
+    ]);
+    // prompt should not be called at all (no interactive prompts when flag is used)
+    expect(mocks.prompt).not.toHaveBeenCalled();
+    expect(mocks.migrate).toHaveBeenCalledWith(
+      expect.objectContaining({ passphrase: 'secret' })
+    );
+  });
 });
