@@ -47,6 +47,7 @@ flowsave backup
 
 - Workflows are saved as JSON files under `~/.flowsave/backups/<id>/`
 - If a Docker container is configured, prompts for a passphrase and exports credentials encrypted with AES-256-GCM
+- **Passphrase requirements**: at least 12 characters, with one uppercase letter, one lowercase letter, and one digit or special character. You are asked to confirm it — the passphrase is never stored anywhere, and credentials in a snapshot cannot be recovered without it.
 - **Folder structure** is preserved only on n8n Enterprise (the folder REST API is an Enterprise feature); community edition backups are flat — all workflows at root level
 - **n8n version** is recorded in snapshot metadata when a Docker container is configured (`docker exec n8n --version`). n8n's public REST API does not expose the instance version, so this field is omitted from snapshots taken without a container.
 
