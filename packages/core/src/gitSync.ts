@@ -132,14 +132,13 @@ export async function pushToGit(
   const snapshotId = snapshotPath.split('/').pop() ?? 'unknown';
   const message = `chore: flowsave backup ${timestamp} snapshot-${snapshotId}`;
 
-  // Check if there is anything to commit
-  const status = spawnSync('git', ['status', '--porcelain'], {
+  // Check if the snapshot files were actually staged (not the whole working tree,
+  // which may have untracked/deleted files from previously pruned snapshots).
+  const staged = spawnSync('git', ['diff', '--cached', '--quiet'], {
     cwd: repoDir,
-    encoding: 'utf-8',
   });
-
-  if (!status.stdout?.trim()) {
-    // Nothing to commit — snapshot already up to date in git
+  // exit 0 = nothing staged, exit 1 = staged changes present
+  if (staged.status === 0) {
     return;
   }
 
