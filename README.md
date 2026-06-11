@@ -7,7 +7,7 @@ Flowsave is an open-source CLI, self-hosted agent, and paid SaaS dashboard for n
 ## Install
 
 ```bash
-npm install -g flowsave
+npm install -g flowsave-cli
 ```
 
 Requires Node.js ≥ 18. Your n8n instance must be reachable from the machine running Flowsave.
@@ -171,7 +171,16 @@ Push the latest snapshot to the configured Git remote.
 flowsave push
 ```
 
-Requires `gitRemote` to be set in your config (`flowsave config set gitRemote <url>`). Credentials files are excluded from git automatically.
+Requires `gitRemote` to be set in your config:
+
+```bash
+flowsave config set gitRemote git@github.com:you/n8n-backups.git
+flowsave config set gitBranch backups   # optional, defaults to main
+```
+
+- The remote repository does not need to exist beforehand — Flowsave initializes a local git repo on first push and creates the remote branch automatically.
+- Encrypted credential files (`_credentials.enc.json`) are excluded from git via `.gitignore`. Only workflow JSON and snapshot metadata are committed.
+- The commit message includes the snapshot ID and timestamp: `chore: flowsave backup <timestamp> snapshot-<id>`.
 
 ---
 
@@ -301,6 +310,16 @@ flowsave doctor
 | Folder structure on restore | ✗ | ✅ |
 
 The folder REST API (`GET /api/v1/projects/{id}/folders`) is gated behind an n8n Enterprise license. On community edition, Flowsave backs up and restores all workflows flat — nothing is lost, subdirectory layout is just not preserved.
+
+## Architecture
+
+```
+flowsave (monorepo)
+├── packages/core     — business logic: n8n API client, encryption, backup/restore/migrate, diff, git sync
+└── packages/cli      — CLI commands (commander); published as the npm package flowsave-cli
+```
+
+The CLI bundles `packages/core` at build time (tsup), so the published package has **zero runtime dependencies** and installs instantly.
 
 ## Status
 

@@ -132,29 +132,28 @@ export async function pushToGit(
   const snapshotId = snapshotPath.split('/').pop() ?? 'unknown';
   const message = `chore: flowsave backup ${timestamp} snapshot-${snapshotId}`;
 
-  // Check if there is anything to commit
-  const status = spawnSync('git', ['status', '--porcelain'], {
+  // Check if the snapshot files were actually staged (not the whole working tree,
+  // which may have untracked/deleted files from previously pruned snapshots).
+  const staged = spawnSync('git', ['diff', '--cached', '--quiet'], {
     cwd: repoDir,
-    encoding: 'utf-8',
   });
+  // exit 1 = staged changes present → commit them; exit 0 = already committed
+  if (staged.status !== 0) {
+    // Configure a minimal git identity if not set (CI / fresh environments)
+    const nameCheck = spawnSync('git', ['config', 'user.name'], {
+      cwd: repoDir,
+      encoding: 'utf-8',
+    });
+    if (!nameCheck.stdout?.trim()) {
+      runGit(['config', 'user.name', 'Flowsave'], { cwd: repoDir });
+      runGit(['config', 'user.email', 'flowsave@localhost'], { cwd: repoDir });
+    }
 
-  if (!status.stdout?.trim()) {
-    // Nothing to commit — snapshot already up to date in git
-    return;
+    runGit(['commit', '-m', message], { cwd: repoDir });
   }
 
-  // Configure a minimal git identity if not set (CI / fresh environments)
-  const nameCheck = spawnSync('git', ['config', 'user.name'], {
-    cwd: repoDir,
-    encoding: 'utf-8',
-  });
-  if (!nameCheck.stdout?.trim()) {
-    runGit(['config', 'user.name', 'Flowsave'], { cwd: repoDir });
-    runGit(['config', 'user.email', 'flowsave@localhost'], { cwd: repoDir });
-  }
-
-  runGit(['commit', '-m', message], { cwd: repoDir });
-
-  // 4. Push to remote
-  runGit(['push', '-u', 'origin', branch], { cwd: repoDir });
+  // 4. Always push — even when nothing new to commit, the branch or remote
+  //    may have changed and the ref needs to be updated on the remote.
+  //    HEAD:<branch> works regardless of local branch name.
+  runGit(['push', '-u', 'origin', `HEAD:${branch}`], { cwd: repoDir });
 }
