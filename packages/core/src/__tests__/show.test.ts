@@ -23,7 +23,7 @@ vi.mock('../config', async (importOriginal) => {
   };
 });
 
-import { readSnapshotDetail, ShowError } from '../backup';
+import { readSnapshotDetail, ShowError } from '../snapshotStore';
 import type { FlowsaveConfig } from '../types';
 
 const baseMeta = {

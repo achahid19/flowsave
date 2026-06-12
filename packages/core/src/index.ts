@@ -45,8 +45,12 @@ export { N8nApiError, N8nClient } from './n8nClient';
 export { CredentialError, exportCredentials, importCredentials, importCredentialsViaApi } from './credentials';
 
 // Backup
-export { backup, BackupError, deleteSnapshot, DeleteError, listSnapshots, readSnapshotDetail, ShowError } from './backup';
-export type { BackupOptions, SnapshotDetail } from './backup';
+export { backup, BackupError } from './backup';
+export type { BackupOptions } from './backup';
+
+// Snapshot store
+export { deleteSnapshot, DeleteError, listSnapshots, readSnapshotDetail, ShowError } from './snapshotStore';
+export type { SnapshotDetail } from './snapshotStore';
 
 // Prune
 export { pruneSnapshots } from './prune';
