@@ -19,7 +19,7 @@ vi.mock('../config', async (importOriginal) => {
   return {
     ...actual,
     getFlowsaveHome: mocks.getFlowsaveHome,
-    getIndexPath: () => join(mocks.getFlowsaveHome(), 'index.json'),
+    getIndexPath: (): string => join(mocks.getFlowsaveHome(), 'index.json'),
   };
 });
 
