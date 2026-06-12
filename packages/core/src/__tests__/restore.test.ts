@@ -68,7 +68,7 @@ vi.mock('../config', async (importOriginal) => {
     getFlowsaveHome: mocks.getFlowsaveHome,
     // getIndexPath must be mocked too: it calls getFlowsaveHome() internally (same-module
     // scope), so the export-level mock above doesn't affect it.
-    getIndexPath: () => join(mocks.getFlowsaveHome(), 'index.json'),
+    getIndexPath: (): string => join(mocks.getFlowsaveHome(), 'index.json'),
   };
 });
 
