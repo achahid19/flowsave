@@ -186,9 +186,16 @@ describe('backup', () => {
     expect(typeof index[0].sizeBytes).toBe('number');
   });
 
-  it('throws BackupError if passphrase is missing when containerName is set', async () => {
+  it('skips credentials (no throw) when containerName is set but passphrase is missing', async () => {
+    // Matches the CLI's "leave blank to skip" prompt — workflows still back up.
     const config = { ...baseConfig, backupDir, containerName: 'n8n' };
-    await expect(backup({ config })).rejects.toThrow(BackupError);
+    const snapshot = await backup({ config });
+
+    expect(snapshot.credentialsIncluded).toBe(false);
+    expect(snapshot.meta.credentialsIncluded).toBe(false);
+    expect(mocks.exportCredentials).not.toHaveBeenCalled();
+    expect(existsSync(join(backupDir, '1', '_credentials.enc.json'))).toBe(false);
+    expect(existsSync(join(backupDir, '1', 'meta.json'))).toBe(true);
   });
 
   it('includes credentials when containerName and passphrase are provided', async () => {
@@ -197,6 +204,39 @@ describe('backup', () => {
 
     expect(snapshot.credentialsIncluded).toBe(true);
     expect(existsSync(join(backupDir, '1', '_credentials.enc.json'))).toBe(true);
+  });
+
+  it('disambiguates duplicate workflow names with the workflow ID instead of overwriting', async () => {
+    // n8n allows duplicate workflow names — both must survive on disk.
+    mocks.getWorkflows.mockResolvedValue([
+      { id: 'wf-a', name: 'Sync Orders', active: false, nodes: [], connections: {}, parentFolderId: null },
+      { id: 'wf-b', name: 'Sync Orders', active: false, nodes: [], connections: {}, parentFolderId: null },
+    ]);
+
+    const config = { ...baseConfig, backupDir };
+    const snapshot = await backup({ config });
+
+    expect(snapshot.meta.workflowCount).toBe(2);
+    expect(existsSync(join(backupDir, '1', 'Sync Orders.json'))).toBe(true);
+    expect(existsSync(join(backupDir, '1', 'Sync Orders_wf-b.json'))).toBe(true);
+    // Both files contain distinct workflows
+    const first = JSON.parse(readFileSync(join(backupDir, '1', 'Sync Orders.json'), 'utf-8'));
+    const second = JSON.parse(readFileSync(join(backupDir, '1', 'Sync Orders_wf-b.json'), 'utf-8'));
+    expect([first.id, second.id].sort()).toEqual(['wf-a', 'wf-b']);
+  });
+
+  it('throws BackupError on a corrupt index instead of restarting IDs at 1', async () => {
+    // A corrupt index treated as empty would compute snapshotId=1 and the
+    // orphan cleanup would DELETE the real snapshot #1. Must refuse instead.
+    const config = { ...baseConfig, backupDir };
+    const existingSnapshot = join(backupDir, '1');
+    mkdirSync(existingSnapshot, { recursive: true });
+    writeFileSync(join(existingSnapshot, 'meta.json'), '{"snapshotId":1}');
+    writeFileSync(join(homeDir, 'index.json'), '{not valid json');
+
+    await expect(backup({ config })).rejects.toThrow(BackupError);
+    // The real snapshot directory was NOT touched
+    expect(existsSync(join(existingSnapshot, 'meta.json'))).toBe(true);
   });
 
   it('cleans up orphaned snapshot directory if it exists but is not in the index', async () => {

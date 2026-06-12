@@ -62,8 +62,9 @@ export interface BackupOptions {
   config: FlowsaveConfig;
   /**
    * Passphrase for credential encryption.
-   * Required when config.containerName is set (credential backup is enabled).
-   * Ignored otherwise.
+   * When config.containerName is set, providing a passphrase enables credential
+   * backup; omitting it skips credentials (workflows are still backed up).
+   * Ignored when no container is configured.
    */
   passphrase?: string;
 }
@@ -145,6 +146,33 @@ function readIndex(indexPath: string): SnapshotIndexEntry[] {
   } catch {
     return [];
   }
+}
+
+/**
+ * Like readIndex, but a corrupt (unparseable) index file is an error rather
+ * than an empty array. backup() MUST use this: treating a corrupt index as
+ * empty would restart snapshot IDs at 1 and the orphan-directory cleanup
+ * would then DELETE the real snapshot #1 before overwriting it.
+ */
+function readIndexStrict(indexPath: string): SnapshotIndexEntry[] {
+  if (!existsSync(indexPath)) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(indexPath, 'utf-8'));
+  } catch {
+    throw new BackupError(
+      `Snapshot index at ${indexPath} is corrupt and cannot be parsed. ` +
+      `Refusing to back up — fix or remove the index file first ` +
+      `(your snapshot directories are untouched).`
+    );
+  }
+  if (!Array.isArray(parsed)) {
+    throw new BackupError(
+      `Snapshot index at ${indexPath} is not a JSON array. ` +
+      `Refusing to back up — fix or remove the index file first.`
+    );
+  }
+  return parsed as SnapshotIndexEntry[];
 }
 
 /**
@@ -298,9 +326,9 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
   const backupDir = resolve(config.backupDir);
   mkdirSync(backupDir, { recursive: true });
 
-  // 2. Determine next snapshot ID
+  // 2. Determine next snapshot ID (strict read — corrupt index must abort, not reset IDs)
   const indexPath = getIndexPath();
-  const existingIndex = readIndex(indexPath);
+  const existingIndex = readIndexStrict(indexPath);
   const snapshotId = nextSnapshotId(existingIndex);
   const snapshotPath = join(backupDir, String(snapshotId));
 
@@ -341,6 +369,11 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
   // 5. Write workflow files in folder-aware structure
   const workflowBackups: WorkflowBackup[] = [];
 
+  // n8n allows duplicate workflow names (and different names can sanitize to the
+  // same string). Track used filenames per directory and disambiguate with the
+  // workflow ID so no file silently overwrites another.
+  const usedFileNames = new Map<string, Set<string>>();
+
   for (const workflow of workflows) {
     const folderPath: string[] =
       workflow.parentFolderId && folderPathMap.has(workflow.parentFolderId)
@@ -355,7 +388,17 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
     mkdirSync(workflowDir, { recursive: true });
 
     // Write workflow JSON
-    const fileName = `${sanitizeName(workflow.name)}.json`;
+    let taken = usedFileNames.get(workflowDir);
+    if (!taken) {
+      taken = new Set();
+      usedFileNames.set(workflowDir, taken);
+    }
+    const baseName = sanitizeName(workflow.name);
+    const fileName = taken.has(`${baseName}.json`)
+      ? `${baseName}_${sanitizeName(workflow.id)}.json`
+      : `${baseName}.json`;
+    taken.add(fileName);
+
     writeFileSync(
       join(workflowDir, fileName),
       JSON.stringify(workflow, null, 2),
@@ -370,15 +413,12 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
     });
   }
 
-  // 6. Export and write credentials (if containerName is configured)
+  // 6. Export and write credentials (if containerName is configured AND a
+  //    passphrase was provided). No passphrase = skip credentials — this matches
+  //    the CLI's "leave blank to skip" prompt; workflows are still backed up.
   let credentialsIncluded = false;
 
-  if (config.containerName) {
-    if (!passphrase) {
-      throw new BackupError(
-        'Credential backup requires a passphrase. Provide one or omit containerName to skip credentials.'
-      );
-    }
+  if (config.containerName && passphrase) {
     const { encrypted, meta } = await exportCredentials(config.containerName, passphrase);
     writeFileSync(join(snapshotPath, '_credentials.enc.json'), encrypted, { mode: 0o600 });
     // Safe metadata written in plaintext — enables diff without decrypting

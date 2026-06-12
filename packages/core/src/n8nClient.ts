@@ -41,6 +41,9 @@ interface PaginatedResponse<T> {
   nextCursor: string | null;
 }
 
+/** Per-request timeout — protects every CLI command from a hung instance. */
+const REQUEST_TIMEOUT_MS = 30_000;
+
 // ---------------------------------------------------------------------------
 // Settings sanitisation
 // ---------------------------------------------------------------------------
@@ -193,8 +196,17 @@ export class N8nClient {
         method,
         headers: this.buildHeaders(),
         body: body !== undefined ? JSON.stringify(body) : undefined,
+        // A hung instance must not hang the CLI forever. 30s is generous for
+        // any single request — pagination keeps individual payloads bounded.
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (err) {
+      if (err instanceof Error && err.name === 'TimeoutError') {
+        throw new N8nApiError(
+          `n8n at ${this.baseUrl} did not respond within ${REQUEST_TIMEOUT_MS / 1000}s (${method} ${path})`,
+          0
+        );
+      }
       const message = err instanceof Error ? err.message : String(err);
       throw new N8nApiError(
         `Network error connecting to n8n at ${this.baseUrl}: ${message}`,
