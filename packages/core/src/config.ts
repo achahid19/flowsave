@@ -5,7 +5,7 @@
  * Never read or write config fields outside this module.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
 import { join, resolve } from 'path';
 import type { FlowsaveConfig } from './types';
@@ -157,5 +157,8 @@ export function writeConfig(config: FlowsaveConfig, configPath = getConfigPath()
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
-  writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
+  // The config contains the n8n API key — owner read/write only.
+  // mode on writeFileSync applies to new files; chmod covers pre-existing ones.
+  writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', { encoding: 'utf-8', mode: 0o600 });
+  chmodSync(configPath, 0o600);
 }

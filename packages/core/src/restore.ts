@@ -405,14 +405,16 @@ export async function restore(options: RestoreOptions): Promise<Snapshot> {
       // n8n instance and cannot be matched against the target's IDs.
       const credMetaPath = join(snapshotPath, '_credentials.meta.json');
       if (!forceCreate && existsSync(credMetaPath)) {
-        let snapshotMeta: CredentialMeta[] = [];
+        // Pruning with an unreadable meta file would treat EVERY credential on the
+        // instance as stale and delete it — only proceed when the parse succeeded.
+        let snapshotMeta: CredentialMeta[] | null = null;
         try {
           snapshotMeta = JSON.parse(readFileSync(credMetaPath, 'utf-8')) as CredentialMeta[];
         } catch {
           warnings.push('Could not read _credentials.meta.json — stale credential pruning was skipped.');
         }
 
-        if (snapshotMeta.length >= 0) {
+        if (snapshotMeta !== null) {
           const snapshotIds = new Set(snapshotMeta.map((c) => c.id));
           try {
             const instanceCreds = await client.getCredentials();

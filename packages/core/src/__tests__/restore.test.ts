@@ -470,4 +470,25 @@ describe('restore', () => {
     await expect(restore({ snapshotId: 1, config, passphrase: 'pass' })).resolves.not.toThrow();
     expect(mocks.deleteCredential).not.toHaveBeenCalled();
   });
+
+  it('CRITICAL: corrupt _credentials.meta.json must NOT delete any credentials', async () => {
+    // Bug fixed: a parse failure left snapshotMeta = [] and the (length >= 0)
+    // guard was always true — pruning ran with an empty ID set and deleted
+    // EVERY credential on the instance. Pruning must be skipped instead.
+    const config = { ...baseConfig, backupDir, containerName: 'n8n' };
+    writeSnapshot(homeDir, backupDir, 1, [{ name: 'Workflow' }], true);
+    writeFileSync(join(backupDir, '1', '_credentials.meta.json'), '{corrupt json!!');
+
+    mocks.getCredentials.mockResolvedValue([
+      { id: 'c1', name: 'API Key', type: 'httpHeaderAuth' },
+      { id: 'c2', name: 'DB Pass', type: 'postgres' },
+    ]);
+
+    const result = await restore({ snapshotId: 1, config, passphrase: 'pass' });
+
+    expect(mocks.deleteCredential).not.toHaveBeenCalled();
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('pruning was skipped')])
+    );
+  });
 });
