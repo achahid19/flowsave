@@ -391,6 +391,48 @@ footer {
 .reveal { opacity:0; transform:translateY(28px); transition: opacity .7s ease, transform .7s ease; }
 .reveal.visible { opacity:1; transform:none; }
 
+/* ─── DARK MODE ──────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:      #0C1511;
+  --text:    #DFF0E8;
+  --muted:   #7BA898;
+  --border:  rgba(93,202,165,0.09);
+  --surface: rgba(15,110,86,0.18);
+}
+[data-theme="dark"] nav { background: rgba(12,21,17,0.92); }
+[data-theme="dark"] .feature-card { background: #0f1a15; }
+[data-theme="dark"] .feature-card:hover { background: #162318; }
+[data-theme="dark"] .btn-github { background: #0f1a15; color: var(--text); }
+[data-theme="dark"] .oss-way { background: #0f1a15; }
+[data-theme="dark"] .oss-way:hover { background: #162318; }
+[data-theme="dark"] .waitlist-wrap { /* already green bg */ }
+[data-theme="dark"] footer { background: var(--bg); }
+
+/* theme toggle button */
+.theme-toggle {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: transparent; border: 1px solid var(--border);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--muted); transition: border-color .2s, background .2s, color .2s;
+  flex-shrink: 0; margin-left: 8px;
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent); background: var(--surface); }
+.theme-toggle .icon-moon { display: none; }
+[data-theme="dark"] .theme-toggle .icon-sun { display: none; }
+[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
+
+/* Dashboard nav highlight */
+.nav-dashboard-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  color: var(--accent) !important; font-weight: 500 !important;
+  background: rgba(29,158,117,0.1); padding: 3px 10px 3px 8px; border-radius: 20px;
+  border: 1px solid rgba(29,158,117,0.25);
+  font-size: 12px !important;
+  transition: background .2s, border-color .2s;
+}
+.nav-dashboard-badge:hover { background: rgba(29,158,117,0.18) !important; border-color: var(--accent) !important; color: var(--accent) !important; }
+.nav-db-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); flex-shrink: 0; animation: pulse 2s infinite; }
+
 /* ─── RESPONSIVE ────────────────────────────────────────────── */
 @media(max-width:1024px) {
   .features-grid { grid-template-columns: repeat(2,1fr); }
@@ -432,8 +474,12 @@ footer {
     <li><a href="#features">Features</a></li>
     <li><a href="#how">How it works</a></li>
     <li><a href="#community">Open source</a></li>
-    <li><a href="#waitlist">Dashboard</a></li>
+    <li><a href="#waitlist" class="nav-dashboard-badge"><span class="nav-db-dot"></span>Dashboard</a></li>
     <li>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
+        <svg class="icon-sun" width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3.2 3.2l1.1 1.1M10.7 10.7l1.1 1.1M10.7 3.2l-1.1 1.1M4.3 10.7l-1.1 1.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <svg class="icon-moon" width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M12.5 9.5A6 6 0 015.5 2.5a6 6 0 000 10 6 6 0 007-3z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
       <a href="https://github.com/achahid19/flowsave" target="_blank" rel="noopener" class="nav-github">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M7 1C3.69 1 1 3.69 1 7c0 2.66 1.73 4.91 4.12 5.71.3.06.41-.13.41-.29v-1.02c-1.67.36-2.02-.8-2.02-.8-.27-.69-.67-.88-.67-.88-.55-.37.04-.36.04-.36.61.04.93.62.93.62.54.92 1.41.65 1.76.5.05-.39.21-.65.38-.8-1.34-.15-2.74-.67-2.74-2.97 0-.66.24-1.19.62-1.61-.06-.15-.27-.76.06-1.58 0 0 .5-.16 1.66.62.48-.13 1-.2 1.51-.2.51 0 1.03.07 1.51.2 1.16-.78 1.66-.62 1.66-.62.33.82.12 1.43.06 1.58.39.42.62.95.62 1.61 0 2.31-1.41 2.82-2.75 2.97.22.19.41.56.41 1.12v1.66c0 .16.11.35.42.29C11.27 11.91 13 9.66 13 7c0-3.31-2.69-6-6-6z"/></svg>
         Star on GitHub
@@ -449,7 +495,7 @@ footer {
   <div class="hero-badge">
     <span class="badge-dot"></span>
     <span class="badge-version">v0.1.1</span>
-    Open source · Live on npm
+    Open source · <a href="https://www.npmjs.com/package/flowsave-cli" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;border-bottom:1px solid rgba(29,158,117,.4);padding-bottom:1px">Live on npm ↗</a>
   </div>
 
   <h1>The backup layer<br><em>n8n never built.</em></h1>
@@ -479,7 +525,7 @@ footer {
         <div class="tdot tdot-r"></div>
         <div class="tdot tdot-y"></div>
         <div class="tdot tdot-g"></div>
-        <span class="term-title">flowsave — bash</span>
+        <span class="term-title">flowsave-cli — bash</span>
       </div>
       <div class="term-body">
         <span><span class="term-prompt">$ </span><span class="term-cmd">flowsave backup</span></span>
@@ -509,7 +555,7 @@ footer {
 <div class="strip">
   <div class="strip-item">
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L10.1 5.9 15.5 6.6 11.5 10.5 12.6 16 8 13.4 3.4 16 4.5 10.5.5 6.6 5.9 5.9z" stroke="#0F6E56" stroke-width="1.2" stroke-linejoin="round"/></svg>
-    <span><strong>Open source</strong> — MIT license</span>
+    <span><strong>Open source</strong> — ELv2 License</span>
   </div>
   <div class="strip-item">
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="9" rx="2" stroke="#0F6E56" stroke-width="1.2"/><path d="M5 4V3a3 3 0 016 0v1" stroke="#0F6E56" stroke-width="1.2" stroke-linecap="round"/></svg>
@@ -874,7 +920,7 @@ footer {
 <footer>
   <div class="footer-left">
     <span class="footer-logo">flow<span>save</span></span>
-    <span class="footer-maker">Built by <a href="https://github.com/achahid19" style="color:var(--accent);text-decoration:none">AIX Automation</a> · For the n8n community</span>
+    <span class="footer-maker">Built by <a href="https://github.com/achahid19" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">@achahid19</a> · For the n8n community</span>
   </div>
   <ul class="footer-links">
     <li><a href="https://github.com/achahid19/flowsave/blob/main/README.md" target="_blank" rel="noopener">Docs</a></li>
@@ -883,10 +929,24 @@ footer {
     <li><a href="https://www.npmjs.com/package/flowsave-cli" target="_blank" rel="noopener">npm</a></li>
     <li><a href="#waitlist">Dashboard</a></li>
   </ul>
-  <span class="footer-copy">© 2026 Flowsave. MIT License.</span>
+  <span class="footer-copy">© 2026 Flowsave. Elastic License 2.0 (ELv2).</span>
 </footer>
 
 <script>
+/* ── Dark mode ─────────────────────────────────────────────────── */
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+})();
+
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('theme', isDark ? 'light' : 'dark');
+}
+
 /* ── Scroll reveal ─────────────────────────────────────────────── */
 const obs = new IntersectionObserver((entries) => {
   entries.forEach((e, i) => {
