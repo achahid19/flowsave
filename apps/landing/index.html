@@ -308,7 +308,7 @@ nav {
 .waitlist-section {
   background: var(--primary); border-radius: 24px;
   padding: 80px 48px; position: relative; overflow: hidden;
-  display: grid; grid-template-columns: 1fr 420px; gap: 64px; align-items: center;
+  display: flex; flex-direction: column;
 }
 .wl-grid {
   position: absolute; inset: 0;
@@ -433,12 +433,129 @@ footer {
 .nav-dashboard-badge:hover { background: rgba(29,158,117,0.18) !important; border-color: var(--accent) !important; color: var(--accent) !important; }
 .nav-db-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); flex-shrink: 0; animation: pulse 2s infinite; }
 
+/* ─── WAITLIST INNER LAYOUT ──────────────────────────────────── */
+.wl-top-row {
+  display: grid; grid-template-columns: 1fr 400px; gap: 56px; align-items: start;
+  margin-bottom: 40px; position: relative;
+}
+
+/* ─── DASHBOARD PREVIEW ─────────────────────────────────────── */
+.dash-preview { position: relative; }
+.dash-coming-tag {
+  position: absolute; top: 12px; right: 12px; z-index: 10;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; font-weight: 600; letter-spacing: .5px;
+  color: var(--light); background: rgba(7,14,11,.9);
+  border: 1px solid rgba(93,202,165,.25); padding: 5px 12px; border-radius: 20px;
+  backdrop-filter: blur(8px);
+}
+.dash-browser {
+  background: #070e0b; border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.07); overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.dash-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 14px; background: #0a130f;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.dash-url-bar {
+  display: flex; align-items: center; gap: 5px;
+  font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(255,255,255,.2);
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.05);
+  border-radius: 5px; padding: 3px 10px;
+}
+.dash-app { display: flex; height: 268px; }
+.dash-sb {
+  width: 118px; flex-shrink: 0;
+  background: #060d0a; border-right: 1px solid rgba(255,255,255,.05); padding: 12px 0;
+}
+.dash-sb-logo {
+  display: flex; align-items: center; gap: 7px; padding: 0 10px 10px; margin-bottom: 8px;
+  font-size: 11px; font-weight: 600; color: rgba(255,255,255,.75);
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.dash-sb-section {
+  font-size: 7.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: rgba(255,255,255,.16); padding: 6px 10px 3px; margin: 0;
+}
+.dash-sb-item {
+  display: flex; align-items: center; gap: 6px; padding: 5px 10px;
+  font-size: 10px; color: rgba(255,255,255,.32);
+}
+.dash-sb-item.active { color: var(--light); background: rgba(93,202,165,.07); }
+.dash-sb-badge {
+  margin-left: auto; font-size: 8px; line-height: 14px;
+  background: rgba(239,68,68,.15); color: #f87171;
+  border-radius: 8px; padding: 0 5px;
+}
+.dash-main {
+  flex: 1; overflow: hidden; padding: 12px 14px;
+  background: #0b1310; display: flex; flex-direction: column; gap: 10px;
+}
+.dash-main-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.dash-page-title { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.82); }
+.dash-page-sub { font-size: 8.5px; color: rgba(255,255,255,.22); margin-top: 2px; }
+.dash-inst-sel {
+  display: flex; align-items: center; gap: 5px; font-size: 9px; color: rgba(255,255,255,.38);
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
+  padding: 4px 8px; border-radius: 6px;
+}
+.dash-inst-dot { width: 5px; height: 5px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+.dash-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 7px; }
+.dash-stat {
+  background: #111c16; border: 1px solid rgba(255,255,255,.06);
+  border-radius: 7px; padding: 8px 10px;
+}
+.dash-stat-n { font-size: 15px; font-weight: 600; color: rgba(255,255,255,.8); line-height: 1; margin-bottom: 3px; }
+.dash-stat-l { font-size: 8px; color: rgba(255,255,255,.22); }
+.dash-bottom { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; flex: 1; min-height: 0; }
+.dash-panel {
+  background: #111c16; border: 1px solid rgba(255,255,255,.06);
+  border-radius: 8px; padding: 9px 11px; overflow: hidden;
+}
+.dash-panel-head {
+  font-size: 9px; font-weight: 600; color: rgba(255,255,255,.4);
+  margin-bottom: 7px; display: flex; align-items: center; gap: 7px;
+}
+.dash-badge-new {
+  font-size: 7.5px; background: rgba(93,202,165,.1); color: var(--light);
+  padding: 1px 5px; border-radius: 8px; border: 1px solid rgba(93,202,165,.18);
+}
+.dash-snap-row {
+  display: grid; grid-template-columns: 28px 30px 1fr 36px 28px;
+  font-size: 8.5px; padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,.04); align-items: center;
+}
+.dash-snap-row.header-row { color: rgba(255,255,255,.18); font-size: 7.5px; font-weight: 700; letter-spacing: .5px; }
+.snap-id { color: rgba(255,255,255,.28); font-family: 'DM Mono', monospace; font-size: 8px; }
+.snap-dim { color: rgba(255,255,255,.22); }
+.snap-ok { color: #22c55e; font-size: 7.5px; }
+.dash-progress { height: 3px; background: rgba(255,255,255,.07); border-radius: 2px; overflow: hidden; }
+.dash-progress-fill {
+  height: 100%; background: linear-gradient(90deg, var(--accent), var(--light));
+  border-radius: 2px; animation: progressShimmer 2.5s ease-in-out infinite alternate;
+}
+@keyframes progressShimmer { from{opacity:.65} to{opacity:1} }
+.dash-timeline { display: flex; flex-direction: column; gap: 7px; margin-top: 8px; }
+.dash-tl-row { display: flex; align-items: center; gap: 7px; }
+.tl-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: rgba(255,255,255,.1); }
+.tl-dot.done { background: #22c55e; }
+.tl-dot.next { background: transparent; border: 1.5px solid var(--light); animation: pulse 2s infinite; }
+.tl-info { display: flex; justify-content: space-between; flex: 1; font-size: 8.5px; color: rgba(255,255,255,.38); }
+.tl-t { color: rgba(255,255,255,.2); }
+.dash-fade-bottom {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 52px;
+  background: linear-gradient(transparent, var(--primary)); pointer-events: none;
+}
+
 /* ─── RESPONSIVE ────────────────────────────────────────────── */
 @media(max-width:1024px) {
   .features-grid { grid-template-columns: repeat(2,1fr); }
   .oss-grid { grid-template-columns: 1fr; }
-  .waitlist-section { grid-template-columns: 1fr; }
+  .wl-top-row { grid-template-columns: 1fr; }
   .wl-card { max-width: 480px; }
+  .dash-stats { grid-template-columns: repeat(2,1fr); }
 }
 @media(max-width:860px) {
   nav { padding: 14px 20px; }
@@ -849,24 +966,26 @@ footer {
   <div class="waitlist-section">
     <div class="wl-grid"></div>
 
-    <div style="position:relative">
-      <p class="wl-eyebrow">Coming next</p>
-      <h2>The Dashboard<br><strong>is coming.</strong></h2>
-      <p>
-        The CLI is free forever. We're building the Dashboard for teams who want
-        scheduled backups, a web UI, multi-instance management, and alerts — without
-        touching the terminal.
-      </p>
-      <div class="wl-perks">
-        <div class="wl-perk"><span class="wl-perk-dot"></span>Scheduled backups with cron or webhook triggers</div>
-        <div class="wl-perk"><span class="wl-perk-dot"></span>Web UI — restore any snapshot with one click</div>
-        <div class="wl-perk"><span class="wl-perk-dot"></span>Multi-instance management in one place</div>
-        <div class="wl-perk"><span class="wl-perk-dot"></span>Email &amp; Slack alerts on backup failure</div>
-        <div class="wl-perk"><span class="wl-perk-dot"></span>Self-hosted agent — your data never leaves your infra</div>
+    <!-- top row: copy + form -->
+    <div class="wl-top-row">
+      <div style="position:relative">
+        <p class="wl-eyebrow">Coming next</p>
+        <h2>The Dashboard<br><strong>is coming.</strong></h2>
+        <p>
+          The CLI is free forever. We're building the Dashboard for teams who want
+          scheduled backups, a web UI, multi-instance management, and alerts — without
+          touching the terminal.
+        </p>
+        <div class="wl-perks">
+          <div class="wl-perk"><span class="wl-perk-dot"></span>Scheduled backups with cron or webhook triggers</div>
+          <div class="wl-perk"><span class="wl-perk-dot"></span>Web UI — restore any snapshot with one click</div>
+          <div class="wl-perk"><span class="wl-perk-dot"></span>Multi-instance management in one place</div>
+          <div class="wl-perk"><span class="wl-perk-dot"></span>Email &amp; Slack alerts on backup failure</div>
+          <div class="wl-perk"><span class="wl-perk-dot"></span>Self-hosted agent — your data never leaves your infra</div>
+        </div>
       </div>
-    </div>
 
-    <div class="wl-card">
+      <div class="wl-card">
       <p class="wl-card-label">Early access</p>
       <p class="wl-card-title">Get notified when it launches</p>
 
@@ -911,7 +1030,162 @@ footer {
         <p class="wl-success-title">You're on the list.</p>
         <p class="wl-success-desc">We'll reach out when the Dashboard is ready. Meanwhile, give the CLI a try — it's live now.</p>
       </div>
-    </div>
+    </div><!-- /wl-card -->
+    </div><!-- /wl-top-row -->
+
+    <!-- ── DASHBOARD PREVIEW MOCKUP ── -->
+    <div class="dash-preview reveal">
+      <div class="dash-coming-tag">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--light);animation:pulse 2s infinite;display:inline-block;flex-shrink:0"></span>
+        Coming soon
+      </div>
+
+      <div class="dash-browser">
+        <!-- browser chrome -->
+        <div class="dash-bar">
+          <div style="display:flex;gap:5px;align-items:center">
+            <div style="width:9px;height:9px;border-radius:50%;background:#ff5f57"></div>
+            <div style="width:9px;height:9px;border-radius:50%;background:#febc2e"></div>
+            <div style="width:9px;height:9px;border-radius:50%;background:#28c840"></div>
+          </div>
+          <div class="dash-url-bar">
+            <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><rect x="1" y="3.5" width="7" height="5" rx="1" stroke="rgba(255,255,255,.3)" stroke-width=".9"/><path d="M3 3.5V2.5a2 2 0 014 0v1" stroke="rgba(255,255,255,.3)" stroke-width=".9" stroke-linecap="round"/></svg>
+            dash.flowsave.dev / overview
+          </div>
+          <div style="width:50px"></div>
+        </div>
+
+        <div class="dash-app">
+          <!-- sidebar -->
+          <div class="dash-sb">
+            <div class="dash-sb-logo">
+              <svg width="13" height="13" viewBox="0 0 28 28" fill="none">
+                <polygon points="14,1 27,7.5 27,20.5 14,27 1,20.5 1,7.5" fill="#0F6E56"/>
+                <polygon points="14,7 21,10.5 21,17.5 14,21 7,17.5 7,10.5" fill="#1D9E75"/>
+              </svg>
+              Flowsave
+            </div>
+            <p class="dash-sb-section">Main</p>
+            <div class="dash-sb-item active">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x=".5" y=".5" width="3.5" height="3.5" rx=".8" stroke="currentColor" stroke-width=".9"/><rect x="6" y=".5" width="3.5" height="3.5" rx=".8" stroke="currentColor" stroke-width=".9"/><rect x=".5" y="6" width="3.5" height="3.5" rx=".8" stroke="currentColor" stroke-width=".9"/><rect x="6" y="6" width="3.5" height="3.5" rx=".8" stroke="currentColor" stroke-width=".9"/></svg>
+              Overview
+            </div>
+            <div class="dash-sb-item">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width=".9"/><path d="M5 3v2.5l1.5 1" stroke="currentColor" stroke-width=".9" stroke-linecap="round"/></svg>
+              Snapshots
+            </div>
+            <div class="dash-sb-item">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1" y="1.5" width="8" height="7" rx="1" stroke="currentColor" stroke-width=".9"/><path d="M1 4h8M3.5 1.5v1M6.5 1.5v1" stroke="currentColor" stroke-width=".9" stroke-linecap="round"/></svg>
+              Schedule
+            </div>
+            <p class="dash-sb-section">Infra</p>
+            <div class="dash-sb-item">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1" y="2" width="8" height="2.5" rx=".8" stroke="currentColor" stroke-width=".9"/><rect x="1" y="5.5" width="8" height="2.5" rx=".8" stroke="currentColor" stroke-width=".9"/></svg>
+              Instances
+            </div>
+            <div class="dash-sb-item">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1.5L9 3.5v3L5 9 1 6.5v-3z" stroke="currentColor" stroke-width=".9" stroke-linejoin="round"/></svg>
+              Alerts <span class="dash-sb-badge">2</span>
+            </div>
+          </div>
+
+          <!-- main content -->
+          <div class="dash-main">
+            <div class="dash-main-top">
+              <div>
+                <div class="dash-page-title">Overview</div>
+                <div class="dash-page-sub">Monitoring 3 instances · All healthy</div>
+              </div>
+              <div class="dash-inst-sel">
+                <span class="dash-inst-dot"></span>
+                All instances
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 3l2.5 2 2.5-2" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+            </div>
+
+            <div class="dash-stats">
+              <div class="dash-stat">
+                <div class="dash-stat-n">183</div>
+                <div class="dash-stat-l">Total snapshots</div>
+              </div>
+              <div class="dash-stat">
+                <div class="dash-stat-n">47</div>
+                <div class="dash-stat-l">Workflows</div>
+              </div>
+              <div class="dash-stat">
+                <div class="dash-stat-n" style="color:#5DCAA5;font-size:13px">2h ago</div>
+                <div class="dash-stat-l">Last backup</div>
+              </div>
+              <div class="dash-stat">
+                <div class="dash-stat-n" style="display:flex;align-items:center;gap:4px;font-size:11px">
+                  <span style="width:5px;height:5px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0"></span>Healthy
+                </div>
+                <div class="dash-stat-l">System status</div>
+              </div>
+            </div>
+
+            <div class="dash-bottom">
+              <!-- snapshots panel -->
+              <div class="dash-panel">
+                <div class="dash-panel-head">
+                  Recent snapshots
+                  <span class="dash-badge-new">+2 today</span>
+                </div>
+                <div class="dash-snap-row header-row">
+                  <span>ID</span><span>Time</span><span>Instance</span><span>Size</span><span></span>
+                </div>
+                <div class="dash-snap-row">
+                  <span class="snap-id">#183</span><span>14:03</span><span>prod</span><span class="snap-dim">1.4 MB</span><span class="snap-ok">● ok</span>
+                </div>
+                <div class="dash-snap-row">
+                  <span class="snap-id">#182</span><span>13:03</span><span>prod</span><span class="snap-dim">1.4 MB</span><span class="snap-ok">● ok</span>
+                </div>
+                <div class="dash-snap-row">
+                  <span class="snap-id">#45</span><span>12:00</span><span>staging</span><span class="snap-dim">0.8 MB</span><span class="snap-ok">● ok</span>
+                </div>
+                <div class="dash-snap-row" style="border:none">
+                  <span class="snap-id">#44</span><span>11:00</span><span>staging</span><span class="snap-dim">0.8 MB</span><span class="snap-ok">● ok</span>
+                </div>
+              </div>
+
+              <!-- schedule panel -->
+              <div class="dash-panel">
+                <div class="dash-panel-head">Backup schedule</div>
+                <div style="margin-bottom:12px">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
+                    <span style="font-size:9px;color:rgba(255,255,255,.3)">Next: prod-server</span>
+                    <span style="font-size:11px;font-weight:600;color:var(--light);font-family:'DM Mono',monospace">42 min</span>
+                  </div>
+                  <div class="dash-progress"><div class="dash-progress-fill" style="width:72%"></div></div>
+                </div>
+                <div class="dash-timeline">
+                  <div class="dash-tl-row">
+                    <div class="tl-dot done"></div>
+                    <div class="tl-info"><span>prod-server</span><span class="tl-t">14:03 ✓</span></div>
+                  </div>
+                  <div class="dash-tl-row">
+                    <div class="tl-dot done"></div>
+                    <div class="tl-info"><span>staging</span><span class="tl-t">13:00 ✓</span></div>
+                  </div>
+                  <div class="dash-tl-row">
+                    <div class="tl-dot next"></div>
+                    <div class="tl-info">
+                      <span style="color:var(--light)">prod-server</span>
+                      <span class="tl-t" style="color:rgba(93,202,165,.55)">15:00 ← next</span>
+                    </div>
+                  </div>
+                  <div class="dash-tl-row" style="opacity:.32">
+                    <div class="tl-dot"></div>
+                    <div class="tl-info"><span>staging</span><span class="tl-t">16:00</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dash-fade-bottom"></div>
+    </div><!-- /dash-preview -->
 
   </div>
 </div>
