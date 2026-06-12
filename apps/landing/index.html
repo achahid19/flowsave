@@ -45,12 +45,13 @@ nav, .feature-card, .oss-way, footer,
 /* ─── NAV ──────────────────────────────────────────────────── */
 nav {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  display: flex; align-items: center; justify-content: space-between;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
   padding: 16px 48px;
   background: rgba(247,253,249,0.88);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
 }
+.nav-actions { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
 .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .nav-wordmark { font-size: 18px; font-weight: 200; letter-spacing: -.5px; color: var(--text); }
 .nav-wordmark span {
@@ -58,7 +59,7 @@ nav {
   background: linear-gradient(90deg, var(--accent), var(--light));
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
-.nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
+.nav-links { display: flex; align-items: center; gap: 32px; list-style: none; justify-content: center; }
 .nav-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color .2s; }
 .nav-links a:hover { color: var(--primary); }
 .nav-github {
@@ -512,6 +513,12 @@ footer {
 }
 .nav-dashboard-badge:hover { background: rgba(29,158,117,0.18) !important; border-color: var(--accent) !important; color: var(--accent) !important; }
 .nav-db-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); flex-shrink: 0; animation: pulse 2s infinite; }
+.nav-agent-chip {
+  font-size: 9px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+  background: linear-gradient(90deg, var(--accent), var(--light));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-left: 3px; opacity: .9;
+}
 
 /* ─── WAITLIST INNER LAYOUT ──────────────────────────────────── */
 .wl-top-row {
@@ -671,18 +678,21 @@ footer {
     <li><a href="#features">Features</a></li>
     <li><a href="#how">How it works</a></li>
     <li><a href="#community">Open source</a></li>
-    <li><a href="#waitlist" class="nav-dashboard-badge"><span class="nav-db-dot"></span>Dashboard</a></li>
-    <li>
-      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
-        <svg class="icon-sun" width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3.2 3.2l1.1 1.1M10.7 10.7l1.1 1.1M10.7 3.2l-1.1 1.1M4.3 10.7l-1.1 1.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-        <svg class="icon-moon" width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M12.5 9.5A6 6 0 015.5 2.5a6 6 0 000 10 6 6 0 007-3z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <a href="https://github.com/achahid19/flowsave" target="_blank" rel="noopener" class="nav-github">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M7 1C3.69 1 1 3.69 1 7c0 2.66 1.73 4.91 4.12 5.71.3.06.41-.13.41-.29v-1.02c-1.67.36-2.02-.8-2.02-.8-.27-.69-.67-.88-.67-.88-.55-.37.04-.36.04-.36.61.04.93.62.93.62.54.92 1.41.65 1.76.5.05-.39.21-.65.38-.8-1.34-.15-2.74-.67-2.74-2.97 0-.66.24-1.19.62-1.61-.06-.15-.27-.76.06-1.58 0 0 .5-.16 1.66.62.48-.13 1-.2 1.51-.2.51 0 1.03.07 1.51.2 1.16-.78 1.66-.62 1.66-.62.33.82.12 1.43.06 1.58.39.42.62.95.62 1.61 0 2.31-1.41 2.82-2.75 2.97.22.19.41.56.41 1.12v1.66c0 .16.11.35.42.29C11.27 11.91 13 9.66 13 7c0-3.31-2.69-6-6-6z"/></svg>
-        Star on GitHub
-      </a>
-    </li>
+    <li><a href="#waitlist" class="nav-dashboard-badge">
+      <span class="nav-db-dot"></span>Dashboard
+      <span class="nav-agent-chip">✦ agent</span>
+    </a></li>
   </ul>
+  <div class="nav-actions">
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
+      <svg class="icon-sun" width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3.2 3.2l1.1 1.1M10.7 10.7l1.1 1.1M10.7 3.2l-1.1 1.1M4.3 10.7l-1.1 1.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <svg class="icon-moon" width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M12.5 9.5A6 6 0 015.5 2.5a6 6 0 000 10 6 6 0 007-3z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <a href="https://github.com/achahid19/flowsave" target="_blank" rel="noopener" class="nav-github">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M7 1C3.69 1 1 3.69 1 7c0 2.66 1.73 4.91 4.12 5.71.3.06.41-.13.41-.29v-1.02c-1.67.36-2.02-.8-2.02-.8-.27-.69-.67-.88-.67-.88-.55-.37.04-.36.04-.36.61.04.93.62.93.62.54.92 1.41.65 1.76.5.05-.39.21-.65.38-.8-1.34-.15-2.74-.67-2.74-2.97 0-.66.24-1.19.62-1.61-.06-.15-.27-.76.06-1.58 0 0 .5-.16 1.66.62.48-.13 1-.2 1.51-.2.51 0 1.03.07 1.51.2 1.16-.78 1.66-.62 1.66-.62.33.82.12 1.43.06 1.58.39.42.62.95.62 1.61 0 2.31-1.41 2.82-2.75 2.97.22.19.41.56.41 1.12v1.66c0 .16.11.35.42.29C11.27 11.91 13 9.66 13 7c0-3.31-2.69-6-6-6z"/></svg>
+      Star on GitHub
+    </a>
+  </div>
 </nav>
 
 <!-- ═══ HERO ════════════════════════════════════════════════════ -->
