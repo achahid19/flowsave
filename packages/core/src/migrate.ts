@@ -79,7 +79,7 @@ export async function migrate(options: MigrateOptions): Promise<Snapshot> {
 
   return {
     ...snapshot,
-    credentialsIncluded: restoreResult.credentialsIncluded,
+    credentialsRestored: restoreResult.credentialsRestored,
     folderStructureRestored: restoreResult.folderStructureRestored,
     credentialImportResults: restoreResult.credentialImportResults,
     warnings: allWarnings.length > 0 ? allWarnings : undefined,

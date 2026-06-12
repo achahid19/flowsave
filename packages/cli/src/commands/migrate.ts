@@ -19,8 +19,7 @@ import type { Command } from 'commander';
 import { migrate, validatePassphrase } from '@flowsave/core';
 import { loadConfigOrExit } from '../utils/config';
 import { handleError } from '../utils/errors';
-import { formatBytes } from '../utils/format';
-import { printCredentialImportDetail } from './restore';
+import { formatBytes, printCredentialImportDetail } from '../utils/format';
 
 export function register(program: Command): void {
   program
@@ -138,7 +137,7 @@ export function register(program: Command): void {
           credLabel = apiSucceeded === apiTotal
             ? chalk.green(`✓ ${apiSucceeded}/${apiTotal} migrated via API`)
             : chalk.yellow(`⚠ ${apiSucceeded}/${apiTotal} migrated via API (${apiTotal - apiSucceeded} failed)`);
-        } else if (snapshot.credentialsIncluded) {
+        } else if (snapshot.credentialsRestored) {
           credLabel = chalk.green('✓ migrated (docker)');
         } else if (m.credentialsIncluded) {
           credLabel = chalk.gray('— skipped (no passphrase or container not configured)');
@@ -156,7 +155,7 @@ export function register(program: Command): void {
         // Remind the user that the snapshot's credentials are encrypted with the
         // passphrase they just set — there is no way to recover it from disk.
         const credWereMigrated =
-          snapshot.credentialsIncluded || (results !== undefined && results.some((r) => r.success));
+          snapshot.credentialsRestored === true || (results !== undefined && results.some((r) => r.success));
         if (passphrase && credWereMigrated) {
           console.log(
             chalk.yellow(`\n  ⚠  Credentials in snapshot #${snapshot.id} are encrypted with the passphrase you entered.\n`) +
@@ -190,7 +189,7 @@ export function register(program: Command): void {
           );
         }
 
-        if (!snapshot.credentialsIncluded && !results) {
+        if (!snapshot.credentialsRestored && !results) {
           // Credentials were skipped entirely (no passphrase or source has no container)
           if (config.containerName && !passphrase) {
             console.log(
