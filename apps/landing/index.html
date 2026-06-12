@@ -32,6 +32,14 @@ body {
   color: var(--text);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  transition: background-color .35s ease, color .35s ease;
+}
+
+/* Smooth token transitions on theme switch */
+nav, .feature-card, .oss-way, footer,
+.btn-github, .nav-github, .strip,
+.how-install, .oss-codeblock {
+  transition: background-color .35s ease, border-color .35s ease, color .35s ease;
 }
 
 /* ─── NAV ──────────────────────────────────────────────────── */
@@ -178,7 +186,7 @@ nav {
   display: flex; align-items: center; gap: 9px;
   font-size: 12px; font-weight: 400; color: var(--muted);
 }
-.strip-item svg { flex-shrink: 0; opacity: .55; }
+.strip-item svg { flex-shrink: 0; opacity: .65; color: var(--primary); }
 .strip-item strong { color: var(--text); font-weight: 500; }
 
 /* ─── FEATURES ──────────────────────────────────────────────── */
@@ -392,23 +400,95 @@ footer {
 .reveal.visible { opacity:1; transform:none; }
 
 /* ─── DARK MODE ──────────────────────────────────────────────── */
-[data-theme="dark"] {
-  --bg:      #0C1511;
-  --text:    #DFF0E8;
-  --muted:   #7BA898;
-  --border:  rgba(93,202,165,0.09);
-  --surface: rgba(15,110,86,0.18);
-}
-[data-theme="dark"] nav { background: rgba(12,21,17,0.92); }
-[data-theme="dark"] .feature-card { background: #0f1a15; }
-[data-theme="dark"] .feature-card:hover { background: #162318; }
-[data-theme="dark"] .btn-github { background: #0f1a15; color: var(--text); }
-[data-theme="dark"] .oss-way { background: #0f1a15; }
-[data-theme="dark"] .oss-way:hover { background: #162318; }
-[data-theme="dark"] .waitlist-wrap { /* already green bg */ }
-[data-theme="dark"] footer { background: var(--bg); }
 
-/* theme toggle button */
+/* Three-level depth hierarchy:
+   --bg #121c17 → page base  (lighter)
+   --dark #090f0c → .how / codeblocks (clearly darker)
+   #162319 → cards / elevated surfaces (mid-level)
+*/
+[data-theme="dark"] {
+  --bg:      #121c17;
+  --text:    #ddeee5;
+  --muted:   #7da89a;
+  --border:  rgba(255,255,255,0.08);
+  --surface: rgba(93,202,165,0.1);
+  --dark:    #090f0c;
+}
+
+/* ── Nav ── */
+[data-theme="dark"] nav {
+  background: rgba(18,28,23,0.93);
+  border-bottom-color: rgba(255,255,255,0.06);
+}
+[data-theme="dark"] .nav-github {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+[data-theme="dark"] .nav-github:hover {
+  background: rgba(255,255,255,0.09) !important;
+  border-color: rgba(93,202,165,0.4) !important;
+  box-shadow: 0 0 0 3px rgba(93,202,165,0.08) !important;
+}
+[data-theme="dark"] .nav-links a:hover { color: var(--light); }
+
+/* ── Hero ── */
+[data-theme="dark"] .hero-badge {
+  background: rgba(93,202,165,0.07);
+  border-color: rgba(93,202,165,0.18);
+}
+[data-theme="dark"] .hero h1 em {
+  background-image: linear-gradient(90deg, var(--light), #a8f0d4);
+}
+[data-theme="dark"] .btn-github {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.1);
+  color: var(--text);
+}
+[data-theme="dark"] .btn-github:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(93,202,165,0.3);
+}
+
+/* ── Strip ── */
+[data-theme="dark"] .strip {
+  border-top-color: rgba(255,255,255,0.06);
+  border-bottom-color: rgba(255,255,255,0.06);
+}
+[data-theme="dark"] .strip-item svg { color: var(--light); filter: none; opacity: .75; }
+
+/* ── Features ── */
+[data-theme="dark"] .features-grid {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.05);
+}
+[data-theme="dark"] .feature-card { background: #162319; }
+[data-theme="dark"] .feature-card:hover { background: #1e2f22; }
+[data-theme="dark"] .feature-icon { background: rgba(93,202,165,0.09); }
+[data-theme="dark"] .feature-icon svg { color: var(--light); filter: none; }
+[data-theme="dark"] .feature-tag { background: rgba(29,158,117,0.14); }
+[data-theme="dark"] .feature-desc strong { color: var(--light); }
+
+/* ── Open Source ── */
+[data-theme="dark"] .oss-way {
+  background: #162319;
+  border-color: rgba(255,255,255,0.07);
+}
+[data-theme="dark"] .oss-way:hover {
+  background: #1e2f22;
+  border-color: rgba(93,202,165,0.28);
+  box-shadow: 0 4px 20px rgba(0,0,0,.3);
+}
+[data-theme="dark"] .oss-way-icon { background: rgba(93,202,165,0.1); }
+[data-theme="dark"] .oss-way-icon svg { color: var(--light); filter: none; }
+
+/* ── Footer ── */
+[data-theme="dark"] footer { border-top-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .footer-links a:hover { color: var(--light); }
+[data-theme="dark"] .footer-copy { color: var(--muted); }
+
+/* ── Theme toggle button ── */
 .theme-toggle {
   width: 32px; height: 32px; border-radius: 50%;
   background: transparent; border: 1px solid var(--border);
@@ -421,7 +501,7 @@ footer {
 [data-theme="dark"] .theme-toggle .icon-sun { display: none; }
 [data-theme="dark"] .theme-toggle .icon-moon { display: block; }
 
-/* Dashboard nav highlight */
+/* ── Dashboard nav badge ── */
 .nav-dashboard-badge {
   display: inline-flex; align-items: center; gap: 5px;
   color: var(--accent) !important; font-weight: 500 !important;
@@ -671,19 +751,19 @@ footer {
 <!-- ═══ STRIP ════════════════════════════════════════════════════ -->
 <div class="strip">
   <div class="strip-item">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L10.1 5.9 15.5 6.6 11.5 10.5 12.6 16 8 13.4 3.4 16 4.5 10.5.5 6.6 5.9 5.9z" stroke="#0F6E56" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L10.1 5.9 15.5 6.6 11.5 10.5 12.6 16 8 13.4 3.4 16 4.5 10.5.5 6.6 5.9 5.9z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
     <span><strong>Open source</strong> — ELv2 License</span>
   </div>
   <div class="strip-item">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="9" rx="2" stroke="#0F6E56" stroke-width="1.2"/><path d="M5 4V3a3 3 0 016 0v1" stroke="#0F6E56" stroke-width="1.2" stroke-linecap="round"/></svg>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="9" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 4V3a3 3 0 016 0v1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
     <span><strong>Local-first</strong> — your data never leaves your server</span>
   </div>
   <div class="strip-item">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#0F6E56" stroke-width="1.2"/><path d="M8 4.5v4l2.5 2.5" stroke="#0F6E56" stroke-width="1.2" stroke-linecap="round"/></svg>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 4.5v4l2.5 2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
     <span><strong>Zero config</strong> — set up in under 5 minutes</span>
   </div>
   <div class="strip-item">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L14.5 5v6L8 14.5 1.5 11V5z" stroke="#0F6E56" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L14.5 5v6L8 14.5 1.5 11V5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
     <span><strong>n8n 1.x &amp; 2.x</strong> compatible</span>
   </div>
 </div>
@@ -699,7 +779,7 @@ footer {
     <div class="feature-card">
       <div class="feature-icon">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <path d="M9 2L16 5.5v7L9 16l-7-3.5v-7L9 2z" stroke="#0F6E56" stroke-width="1.4" stroke-linejoin="round"/>
+          <path d="M9 2L16 5.5v7L9 16l-7-3.5v-7L9 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
           <path d="M9 9l7-3.5M9 9v7M9 9L2 5.5" stroke="#1D9E75" stroke-width="1.2" stroke-linecap="round"/>
         </svg>
       </div>
@@ -711,7 +791,7 @@ footer {
     <div class="feature-card">
       <div class="feature-icon">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <rect x="3" y="3" width="12" height="12" rx="3" stroke="#0F6E56" stroke-width="1.4"/>
+          <rect x="3" y="3" width="12" height="12" rx="3" stroke="currentColor" stroke-width="1.4"/>
           <path d="M6.5 9l2 2 3-3" stroke="#1D9E75" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
@@ -723,7 +803,7 @@ footer {
     <div class="feature-card">
       <div class="feature-icon">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <path d="M2 9h14M11 5l4 4-4 4" stroke="#0F6E56" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 9h14M11 5l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
       <h3 class="feature-title">One-command migration</h3>
@@ -734,9 +814,9 @@ footer {
     <div class="feature-card">
       <div class="feature-icon">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <circle cx="5" cy="9" r="2.5" stroke="#0F6E56" stroke-width="1.4"/>
-          <circle cx="13" cy="5" r="2.5" stroke="#0F6E56" stroke-width="1.4"/>
-          <circle cx="13" cy="13" r="2.5" stroke="#0F6E56" stroke-width="1.4"/>
+          <circle cx="5" cy="9" r="2.5" stroke="currentColor" stroke-width="1.4"/>
+          <circle cx="13" cy="5" r="2.5" stroke="currentColor" stroke-width="1.4"/>
+          <circle cx="13" cy="13" r="2.5" stroke="currentColor" stroke-width="1.4"/>
           <path d="M7.5 9l3-2.5M7.5 9l3 2.5" stroke="#1D9E75" stroke-width="1.2" stroke-linecap="round"/>
         </svg>
       </div>
@@ -748,8 +828,8 @@ footer {
     <div class="feature-card">
       <div class="feature-icon">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <rect x="2" y="5" width="6" height="8" rx="2" stroke="#0F6E56" stroke-width="1.4"/>
-          <rect x="10" y="5" width="6" height="8" rx="2" stroke="#0F6E56" stroke-width="1.4"/>
+          <rect x="2" y="5" width="6" height="8" rx="2" stroke="currentColor" stroke-width="1.4"/>
+          <rect x="10" y="5" width="6" height="8" rx="2" stroke="currentColor" stroke-width="1.4"/>
           <path d="M8 9h2" stroke="#1D9E75" stroke-width="1.4" stroke-linecap="round"/>
         </svg>
       </div>
@@ -761,7 +841,7 @@ footer {
     <div class="feature-card">
       <div class="feature-icon">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <circle cx="9" cy="9" r="6.5" stroke="#0F6E56" stroke-width="1.4"/>
+          <circle cx="9" cy="9" r="6.5" stroke="currentColor" stroke-width="1.4"/>
           <path d="M6.5 9l2 2 3-3" stroke="#1D9E75" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
@@ -889,7 +969,7 @@ footer {
 
       <a href="https://github.com/achahid19/flowsave" target="_blank" rel="noopener" class="oss-way" style="text-decoration:none">
         <div class="oss-way-icon">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L14.5 5v6L8 14.5 1.5 11V5z" stroke="#0F6E56" stroke-width="1.2" stroke-linejoin="round"/></svg>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L14.5 5v6L8 14.5 1.5 11V5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
         </div>
         <div>
           <div class="oss-way-title">⭐ Star the repo</div>
@@ -899,7 +979,7 @@ footer {
 
       <a href="https://github.com/achahid19/flowsave/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener" class="oss-way" style="text-decoration:none">
         <div class="oss-way-icon">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h5" stroke="#0F6E56" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
         </div>
         <div>
           <div class="oss-way-title">Read CONTRIBUTING.md</div>
@@ -909,7 +989,7 @@ footer {
 
       <a href="https://github.com/achahid19/flowsave/issues" target="_blank" rel="noopener" class="oss-way" style="text-decoration:none">
         <div class="oss-way-icon">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#0F6E56" stroke-width="1.2"/><path d="M8 5.5v3M8 10.5v.5" stroke="#1D9E75" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 5.5v3M8 10.5v.5" stroke="#1D9E75" stroke-width="1.4" stroke-linecap="round"/></svg>
         </div>
         <div>
           <div class="oss-way-title">Pick up a good first issue</div>
@@ -919,7 +999,7 @@ footer {
 
       <a href="https://github.com/achahid19/flowsave/discussions" target="_blank" rel="noopener" class="oss-way" style="text-decoration:none">
         <div class="oss-way-icon">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3h12v8H9l-3 3v-3H2V3z" stroke="#0F6E56" stroke-width="1.2" stroke-linejoin="round"/></svg>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3h12v8H9l-3 3v-3H2V3z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
         </div>
         <div>
           <div class="oss-way-title">Join the discussion</div>
