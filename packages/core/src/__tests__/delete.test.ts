@@ -23,7 +23,7 @@ vi.mock('../config', async (importOriginal) => {
   };
 });
 
-import { deleteSnapshot, DeleteError } from '../backup';
+import { deleteSnapshot, DeleteError } from '../snapshotStore';
 import type { FlowsaveConfig } from '../types';
 
 describe('deleteSnapshot', () => {

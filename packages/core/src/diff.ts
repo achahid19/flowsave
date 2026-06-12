@@ -11,17 +11,16 @@
  * All operations are local (disk reads only) — no API calls.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
-import { join, relative, sep } from 'path';
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 import { getIndexPath } from './config';
+import { getSnapshotPath, readIndex, readWorkflowsFromDisk } from './snapshotStore';
 import type {
   CredentialMeta,
   DiffResult,
   FieldChange,
   FlowsaveConfig,
   N8nWorkflow,
-  SnapshotIndexEntry,
-  WorkflowBackup,
   WorkflowDiff,
 } from './types';
 
@@ -40,76 +39,20 @@ export class DiffError extends Error {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-function readIndex(): SnapshotIndexEntry[] {
-  const indexPath = getIndexPath();
-  if (!existsSync(indexPath)) return [];
-  try {
-    return JSON.parse(readFileSync(indexPath, 'utf-8')) as SnapshotIndexEntry[];
-  } catch {
-    return [];
-  }
-}
-
 function ensureSnapshotExists(snapshotId: number, backupDir: string): string {
-  const index = readIndex();
-  const entry = index.find((e) => e.id === snapshotId);
-  if (!entry) {
+  const index = readIndex(getIndexPath());
+  if (!index.find((e) => e.id === snapshotId)) {
     throw new DiffError(
       `Snapshot ${snapshotId} not found. Run "flowsave list" to see available snapshots.`
     );
   }
-  const snapshotPath = join(backupDir, String(snapshotId));
+  const snapshotPath = getSnapshotPath(backupDir, snapshotId);
   if (!existsSync(snapshotPath)) {
     throw new DiffError(
       `Snapshot ${snapshotId} directory not found at ${snapshotPath}.`
     );
   }
   return snapshotPath;
-}
-
-/**
- * Walk a snapshot directory and collect all workflow JSON files.
- */
-function readWorkflows(snapshotPath: string): WorkflowBackup[] {
-  const result: WorkflowBackup[] = [];
-
-  function walk(dir: string): void {
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      const stat = statSync(full);
-
-      if (stat.isDirectory()) {
-        walk(full);
-      } else if (
-        entry.endsWith('.json') &&
-        entry !== 'meta.json' &&
-        entry !== '_credentials.enc.json' &&
-        entry !== '_credentials.meta.json'
-      ) {
-        let workflow: N8nWorkflow;
-        try {
-          workflow = JSON.parse(readFileSync(full, 'utf-8')) as N8nWorkflow;
-        } catch {
-          throw new DiffError(`Failed to parse workflow file: ${full}`);
-        }
-
-        const relDir = relative(snapshotPath, dir);
-        const folderPath = relDir
-          ? relDir.split(sep).filter((p) => p.length > 0)
-          : [];
-
-        result.push({
-          id: workflow.id,
-          name: workflow.name,
-          folderPath,
-          data: workflow,
-        });
-      }
-    }
-  }
-
-  walk(snapshotPath);
-  return result;
 }
 
 /**
@@ -130,7 +73,7 @@ function computeChanges(a: N8nWorkflow, b: N8nWorkflow): FieldChange[] {
     const before = a[field];
     const after = b[field];
     if (JSON.stringify(before) !== JSON.stringify(after)) {
-      changes.push({ field, before, after });
+      changes.push({ field: field as string, before, after });
     }
   }
 
@@ -174,8 +117,8 @@ export function diff(
   const pathA = ensureSnapshotExists(snapshotIdA, config.backupDir);
   const pathB = ensureSnapshotExists(snapshotIdB, config.backupDir);
 
-  const workflowsA = readWorkflows(pathA);
-  const workflowsB = readWorkflows(pathB);
+  const workflowsA = readWorkflowsFromDisk(pathA);
+  const workflowsB = readWorkflowsFromDisk(pathB);
   const credsA = readCredentialMeta(pathA);
   const credsB = readCredentialMeta(pathB);
 

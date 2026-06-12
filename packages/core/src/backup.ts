@@ -14,15 +14,16 @@ import {
   statSync,
   writeFileSync,
 } from 'fs';
-import { join, relative, resolve, sep } from 'path';
+import { join, resolve } from 'path';
 import { exportCredentials, getContainerVersion } from './credentials';
 import { getFlowsaveHome, getIndexPath } from './config';
 import { N8nClient } from './n8nClient';
+import { getSnapshotPath, writeIndex } from './snapshotStore';
+export { deleteSnapshot, DeleteError, listSnapshots, readSnapshotDetail, ShowError } from './snapshotStore';
+export type { SnapshotDetail } from './snapshotStore';
 import type {
-  CredentialMeta,
   FlowsaveConfig,
   N8nFolder,
-  N8nWorkflow,
   Snapshot,
   SnapshotIndexEntry,
   SnapshotMeta,
@@ -37,20 +38,6 @@ export class BackupError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'BackupError';
-  }
-}
-
-export class DeleteError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'DeleteError';
-  }
-}
-
-export class ShowError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ShowError';
   }
 }
 
@@ -134,21 +121,6 @@ function computeDirSize(dirPath: string): number {
 }
 
 /**
- * Read the local snapshot index, returning an empty array if it doesn't exist.
- */
-function readIndex(indexPath: string): SnapshotIndexEntry[] {
-  if (!existsSync(indexPath)) return [];
-  try {
-    const content = readFileSync(indexPath, 'utf-8');
-    const parsed = JSON.parse(content);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as SnapshotIndexEntry[];
-  } catch {
-    return [];
-  }
-}
-
-/**
  * Like readIndex, but a corrupt (unparseable) index file is an error rather
  * than an empty array. backup() MUST use this: treating a corrupt index as
  * empty would restart snapshot IDs at 1 and the orphan-directory cleanup
@@ -184,131 +156,6 @@ function nextSnapshotId(entries: SnapshotIndexEntry[]): number {
 }
 
 // ---------------------------------------------------------------------------
-// Public helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Return all entries from the local snapshot registry (~/.flowsave/index.json).
- * Used by `flowsave list` in the CLI. Returns an empty array if no backups exist yet.
- */
-export function listSnapshots(): SnapshotIndexEntry[] {
-  return readIndex(getIndexPath());
-}
-
-/**
- * Delete a single snapshot: removes its directory from disk and removes its
- * entry from ~/.flowsave/index.json.
- *
- * Throws DeleteError if the ID is not in the index.
- */
-export function deleteSnapshot(snapshotId: number, config: FlowsaveConfig): void {
-  const indexPath = getIndexPath();
-  const entries = readIndex(indexPath);
-
-  if (!entries.find((e) => e.id === snapshotId)) {
-    throw new DeleteError(
-      `Snapshot ${snapshotId} not found. Run "flowsave list" to see available snapshots.`
-    );
-  }
-
-  const snapshotPath = join(resolve(config.backupDir), String(snapshotId));
-  if (existsSync(snapshotPath)) {
-    rmSync(snapshotPath, { recursive: true, force: true });
-  }
-
-  const updated = entries.filter((e) => e.id !== snapshotId);
-  writeFileSync(indexPath, JSON.stringify(updated, null, 2), 'utf-8');
-}
-
-// ---------------------------------------------------------------------------
-// Snapshot detail reader
-// ---------------------------------------------------------------------------
-
-export interface SnapshotDetail {
-  meta: SnapshotMeta;
-  workflows: WorkflowBackup[];
-  /** True when _credentials.enc.json is present on disk (cross-checks meta). */
-  hasCredentials: boolean;
-  /**
-   * Credential metadata from _credentials.meta.json (id, name, type — no secrets).
-   * null when the file is absent (snapshot predates meta file support).
-   */
-  credentialMeta: CredentialMeta[] | null;
-  snapshotPath: string;
-}
-
-/**
- * Read the full detail of a snapshot from disk: meta.json + all workflow JSON files.
- * Used by `flowsave show <id>`.
- *
- * Throws ShowError if the snapshot directory or meta.json is missing.
- */
-export function readSnapshotDetail(snapshotId: number, config: FlowsaveConfig): SnapshotDetail {
-  const snapshotPath = join(resolve(config.backupDir), String(snapshotId));
-
-  if (!existsSync(snapshotPath)) {
-    throw new ShowError(
-      `Snapshot ${snapshotId} not found. Run "flowsave list" to see available snapshots.`
-    );
-  }
-
-  const metaPath = join(snapshotPath, 'meta.json');
-  if (!existsSync(metaPath)) {
-    throw new ShowError(`Snapshot ${snapshotId} is missing meta.json — it may be corrupt.`);
-  }
-
-  let meta: SnapshotMeta;
-  try {
-    meta = JSON.parse(readFileSync(metaPath, 'utf-8')) as SnapshotMeta;
-  } catch {
-    throw new ShowError(`Failed to parse meta.json for snapshot ${snapshotId}.`);
-  }
-
-  const hasCredentials = existsSync(join(snapshotPath, '_credentials.enc.json'));
-
-  const credMetaPath = join(snapshotPath, '_credentials.meta.json');
-  let credentialMeta: CredentialMeta[] | null = null;
-  if (existsSync(credMetaPath)) {
-    try {
-      credentialMeta = JSON.parse(readFileSync(credMetaPath, 'utf-8')) as CredentialMeta[];
-    } catch {
-      credentialMeta = null;
-    }
-  }
-
-  const workflows: WorkflowBackup[] = [];
-
-  function walk(dir: string): void {
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      const stat = statSync(full);
-      if (stat.isDirectory()) {
-        walk(full);
-      } else if (
-        entry.endsWith('.json') &&
-        entry !== 'meta.json' &&
-        entry !== '_credentials.enc.json' &&
-        entry !== '_credentials.meta.json'
-      ) {
-        let workflow: N8nWorkflow;
-        try {
-          workflow = JSON.parse(readFileSync(full, 'utf-8')) as N8nWorkflow;
-        } catch {
-          throw new ShowError(`Failed to parse workflow file: ${full}`);
-        }
-        const relDir = relative(snapshotPath, dir);
-        const folderPath = relDir ? relDir.split(sep).filter((p) => p.length > 0) : [];
-        workflows.push({ id: workflow.id, name: workflow.name, folderPath, data: workflow });
-      }
-    }
-  }
-
-  walk(snapshotPath);
-
-  return { meta, workflows, hasCredentials, credentialMeta, snapshotPath };
-}
-
-// ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
 
@@ -330,7 +177,7 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
   const indexPath = getIndexPath();
   const existingIndex = readIndexStrict(indexPath);
   const snapshotId = nextSnapshotId(existingIndex);
-  const snapshotPath = join(backupDir, String(snapshotId));
+  const snapshotPath = getSnapshotPath(backupDir, snapshotId);
 
   if (existsSync(snapshotPath)) {
     // Orphaned directory from a previously-failed backup (created but never indexed).
@@ -458,11 +305,7 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
 
   // Ensure flowsave home exists before writing index
   mkdirSync(getFlowsaveHome(), { recursive: true });
-  writeFileSync(
-    indexPath,
-    JSON.stringify([...existingIndex, newEntry], null, 2),
-    'utf-8'
-  );
+  writeIndex(indexPath, [...existingIndex, newEntry]);
 
   completed = true;
   return {

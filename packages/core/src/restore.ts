@@ -16,21 +16,19 @@
 
 import {
   existsSync,
-  readdirSync,
   readFileSync,
-  statSync,
 } from 'fs';
-import { join, relative, sep } from 'path';
+import { join } from 'path';
 import { importCredentials, importCredentialsViaApi } from './credentials';
 import { getIndexPath } from './config';
 import { N8nClient, N8nApiError } from './n8nClient';
+import { getSnapshotPath, readIndex, readWorkflowsFromDisk } from './snapshotStore';
 import type {
   CredentialImportResult,
   CredentialMeta,
   FlowsaveConfig,
   N8nWorkflow,
   Snapshot,
-  SnapshotIndexEntry,
   SnapshotMeta,
   WorkflowBackup,
 } from './types';
@@ -87,31 +85,18 @@ export interface RestoreOptions {
 /**
  * Read the snapshot index and find the entry for a given ID.
  */
-function findSnapshotEntry(snapshotId: number): SnapshotIndexEntry {
-  const indexPath = getIndexPath();
-  if (!existsSync(indexPath)) {
+function findSnapshotEntry(snapshotId: number): void {
+  const entries = readIndex(getIndexPath());
+  if (entries.length === 0) {
     throw new RestoreError(`No snapshots found. Run "flowsave backup" first.`);
   }
-
-  let entries: SnapshotIndexEntry[];
-  try {
-    entries = JSON.parse(readFileSync(indexPath, 'utf-8')) as SnapshotIndexEntry[];
-  } catch {
-    throw new RestoreError('Failed to read snapshot index. The index file may be corrupt.');
-  }
-
-  const entry = entries.find((e) => e.id === snapshotId);
-  if (!entry) {
+  if (!entries.find((e) => e.id === snapshotId)) {
     throw new RestoreError(
       `Snapshot ${snapshotId} not found. Run "flowsave list" to see available snapshots.`
     );
   }
-  return entry;
 }
 
-/**
- * Read meta.json from a snapshot directory.
- */
 function readSnapshotMeta(snapshotPath: string): SnapshotMeta {
   const metaPath = join(snapshotPath, 'meta.json');
   if (!existsSync(metaPath)) {
@@ -122,53 +107,6 @@ function readSnapshotMeta(snapshotPath: string): SnapshotMeta {
   } catch {
     throw new RestoreError(`Failed to parse meta.json at ${snapshotPath}.`);
   }
-}
-
-/**
- * Walk a snapshot directory and collect all workflow JSON files.
- * Returns an array of WorkflowBackup objects with reconstructed folder paths.
- */
-function readWorkflowsFromDisk(snapshotPath: string): WorkflowBackup[] {
-  const result: WorkflowBackup[] = [];
-
-  function walk(dir: string): void {
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      const stat = statSync(full);
-
-      if (stat.isDirectory()) {
-        walk(full);
-      } else if (
-        entry.endsWith('.json') &&
-        entry !== 'meta.json' &&
-        entry !== '_credentials.enc.json' &&
-        entry !== '_credentials.meta.json'
-      ) {
-        let workflow: N8nWorkflow;
-        try {
-          workflow = JSON.parse(readFileSync(full, 'utf-8')) as N8nWorkflow;
-        } catch {
-          throw new RestoreError(`Failed to parse workflow file: ${full}`);
-        }
-
-        // Reconstruct folder path from the relative directory
-        const relDir = relative(snapshotPath, dir);
-        const folderPath = relDir
-          ? relDir.split(sep).filter((p) => p.length > 0)
-          : [];
-
-        result.push({
-          id: workflow.id,
-          name: workflow.name,
-          folderPath,
-          data: workflow,
-        });
-      }
-    }
-  }
-
-  walk(snapshotPath);
-  return result;
 }
 
 /**
@@ -254,7 +192,7 @@ export async function restore(options: RestoreOptions): Promise<Snapshot> {
 
   // 1. Validate snapshot exists in index (throws RestoreError if not found)
   findSnapshotEntry(snapshotId);
-  const snapshotPath = join(config.backupDir, String(snapshotId));
+  const snapshotPath = getSnapshotPath(config.backupDir, snapshotId);
 
   if (!existsSync(snapshotPath)) {
     throw new RestoreError(
