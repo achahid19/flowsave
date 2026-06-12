@@ -195,7 +195,18 @@ export interface Snapshot {
   workflows: WorkflowBackup[];
   /** Absolute path to the snapshot directory on disk. */
   snapshotPath: string;
+  /**
+   * Mirror of meta.credentialsIncluded — true when the snapshot contains an
+   * encrypted credential bundle. Never changes meaning: always "snapshot has creds".
+   */
   credentialsIncluded: boolean;
+  /**
+   * True when credentials from this snapshot were actually restored/migrated to
+   * the target instance during this operation. Distinct from credentialsIncluded,
+   * which only says the snapshot contains credentials.
+   * Undefined on backup() results (restore hasn't happened yet).
+   */
+  credentialsRestored?: boolean;
   /**
    * True when folder hierarchy was successfully re-created on the target during
    * a restore/migrate. Undefined on backup snapshots or when no folders existed.

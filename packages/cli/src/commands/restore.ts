@@ -14,53 +14,9 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import type { Command } from 'commander';
 import { restore } from '@flowsave/core';
-import type { CredentialImportResult } from '@flowsave/core';
 import { loadConfigOrExit } from '../utils/config';
 import { handleError } from '../utils/errors';
-import { formatBytes } from '../utils/format';
-
-// ---------------------------------------------------------------------------
-// Credential detail block — shared between restore and migrate
-// ---------------------------------------------------------------------------
-
-/**
- * Print a verbose per-credential import breakdown.
- * Called after the summary table when credentials were imported via the API.
- */
-export function printCredentialImportDetail(results: CredentialImportResult[]): void {
-  const succeeded = results.filter((r) => r.success);
-  const failed    = results.filter((r) => !r.success);
-
-  console.log(chalk.bold('\n  Credential Import Detail'));
-  console.log(chalk.gray('  ' + '─'.repeat(44)));
-
-  for (const r of succeeded) {
-    console.log(
-      `  ${chalk.green('✓')} ${chalk.white(r.name.padEnd(35))} ${chalk.gray(r.type)}`
-    );
-  }
-
-  for (const r of failed) {
-    console.log(
-      `  ${chalk.red('✗')} ${chalk.white(r.name.padEnd(35))} ${chalk.gray(r.type)}`
-    );
-  }
-
-  if (failed.length > 0) {
-    console.log(
-      chalk.yellow(
-        `\n  ⚠  ${failed.length} credential${failed.length !== 1 ? 's' : ''} could not be imported automatically.\n`
-      ) +
-      chalk.gray(
-        '     This usually happens with OAuth credentials because their exported data\n' +
-        '     includes internal token fields that the n8n API schema rejects.\n' +
-        '     You can re-add them manually in the n8n UI on the target instance,\n' +
-        '     or use --target-container if the target container is accessible locally\n' +
-        '     (the Docker path handles all credential types without schema restrictions).'
-      )
-    );
-  }
-}
+import { formatBytes, printCredentialImportDetail } from '../utils/format';
 
 // ---------------------------------------------------------------------------
 // Command
@@ -179,7 +135,7 @@ export function register(program: Command): void {
           credLabel = apiSucceeded === apiTotal
             ? chalk.green(`✓ ${apiSucceeded}/${apiTotal} imported via API`)
             : chalk.yellow(`⚠ ${apiSucceeded}/${apiTotal} imported via API (${apiTotal - apiSucceeded} failed)`);
-        } else if (snapshot.credentialsIncluded) {
+        } else if (snapshot.credentialsRestored) {
           // Docker path: all-or-nothing success
           credLabel = chalk.green('✓ decrypted & imported (docker)');
         } else if (m.credentialsIncluded) {

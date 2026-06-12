@@ -88,12 +88,14 @@ export function register(program: Command): void {
 
       // Delete all
       let deletedCount = 0;
+      let failedCount = 0;
       for (const entry of toDelete) {
         try {
           deleteSnapshot(entry.id, config);
           console.log(chalk.green(`✓ Snapshot ${entry.id} deleted.`));
           deletedCount++;
         } catch (err) {
+          failedCount++;
           if (err instanceof DeleteError) {
             console.error(chalk.red(`✗ ${err.message}`));
           } else {
@@ -104,6 +106,12 @@ export function register(program: Command): void {
 
       if (deletedCount > 1) {
         console.log(chalk.bold(`\n  ${deletedCount} snapshots deleted.`));
+      }
+
+      // Exit 1 when any requested ID was not deleted (partial failure or missing IDs)
+      // so scripts can detect the problem.
+      if (failedCount > 0 || missing.length > 0) {
+        process.exit(1);
       }
     });
 }

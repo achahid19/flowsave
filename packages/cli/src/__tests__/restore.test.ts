@@ -21,7 +21,8 @@ vi.mock('@flowsave/core', () => ({
 
 vi.mock('inquirer', () => ({ default: { prompt: mocks.prompt } }));
 
-import { register, printCredentialImportDetail } from '../commands/restore';
+import { register } from '../commands/restore';
+import { printCredentialImportDetail } from '../utils/format';
 
 // ---------------------------------------------------------------------------
 // Helpers

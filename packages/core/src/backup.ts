@@ -192,13 +192,12 @@ export async function backup(options: BackupOptions): Promise<Snapshot> {
   let completed = false;
   try {
 
-  // 3. Fetch workflows (folders need projectId from workflows first).
-  //    n8n's public API does not expose the instance version — detect it via
-  //    `docker exec n8n --version` when a container is configured.
-  const [workflows, n8nVersion] = await Promise.all([
-    client.getWorkflows(),
-    Promise.resolve(config.containerName ? getContainerVersion(config.containerName) : undefined),
-  ]);
+  // 3. Fetch workflows and detect n8n version.
+  //    getContainerVersion() uses spawnSync (blocking), so these run sequentially
+  //    despite the separate awaits. True parallelism would require an async spawn;
+  //    left sequential for simplicity since the docker call is fast (<200ms).
+  const workflows = await client.getWorkflows();
+  const n8nVersion = config.containerName ? getContainerVersion(config.containerName) : undefined;
 
   // 4. Resolve folder structure.
   //    Correct endpoint: GET /api/v1/projects/{projectId}/folders (n8n v2.14+).

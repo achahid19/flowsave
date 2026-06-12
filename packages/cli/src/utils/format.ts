@@ -6,7 +6,7 @@
  */
 
 import chalk from 'chalk';
-import type { DiffResult } from '@flowsave/core';
+import type { CredentialImportResult, DiffResult } from '@flowsave/core';
 
 // ---------------------------------------------------------------------------
 // Bytes
@@ -151,4 +151,47 @@ export function renderDiff(result: DiffResult): string {
   }
 
   return lines.join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Credential import detail
+// ---------------------------------------------------------------------------
+
+/**
+ * Print a verbose per-credential import breakdown.
+ * Called after the summary table when credentials were imported via the REST API.
+ */
+export function printCredentialImportDetail(results: CredentialImportResult[]): void {
+  const succeeded = results.filter((r) => r.success);
+  const failed    = results.filter((r) => !r.success);
+
+  console.log(chalk.bold('\n  Credential Import Detail'));
+  console.log(chalk.gray('  ' + '─'.repeat(44)));
+
+  for (const r of succeeded) {
+    console.log(
+      `  ${chalk.green('✓')} ${chalk.white(r.name.padEnd(35))} ${chalk.gray(r.type)}`
+    );
+  }
+
+  for (const r of failed) {
+    console.log(
+      `  ${chalk.red('✗')} ${chalk.white(r.name.padEnd(35))} ${chalk.gray(r.type)}`
+    );
+  }
+
+  if (failed.length > 0) {
+    console.log(
+      chalk.yellow(
+        `\n  ⚠  ${failed.length} credential${failed.length !== 1 ? 's' : ''} could not be imported automatically.\n`
+      ) +
+      chalk.gray(
+        '     This usually happens with OAuth credentials because their exported data\n' +
+        '     includes internal token fields that the n8n API schema rejects.\n' +
+        '     You can re-add them manually in the n8n UI on the target instance,\n' +
+        '     or use --target-container if the target container is accessible locally\n' +
+        '     (the Docker path handles all credential types without schema restrictions).'
+      )
+    );
+  }
 }
