@@ -129,6 +129,10 @@ function computeChanges(a: N8nWorkflow, b: N8nWorkflow): FieldChange[] {
   for (const field of fields) {
     const before = a[field];
     const after = b[field];
+    // JSON.stringify is key-order sensitive: if n8n ever returns the same object
+    // with keys in a different order, this will flag a false "modified" entry and
+    // keep semantically identical snapshots from being pruned. Acceptable for now;
+    // replace with a stable deep-equal if spurious diffs are observed in practice.
     if (JSON.stringify(before) !== JSON.stringify(after)) {
       changes.push({ field, before, after });
     }

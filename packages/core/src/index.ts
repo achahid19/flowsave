@@ -7,19 +7,14 @@
 
 // Types
 export type {
-  BackupJob,
-  BackupJobPayload,
-  BackupJobType,
   CredentialImportResult,
   CredentialMeta,
   CredentialMetadata,
   DiffResult,
   FieldChange,
   FlowsaveConfig,
-  JobStatus,
   N8nFolder,
   N8nWorkflow,
-  PollResponse,
   Snapshot,
   SnapshotIndexEntry,
   SnapshotMeta,
