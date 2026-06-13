@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flowsave CLI — Documentation</title>
+<meta name="description" content="Full reference for the Flowsave CLI: backup, restore, migrate, diff, and manage your n8n instance snapshots.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,200;0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary:  #0B6247;
+  --accent:   #18A078;
+  --light:    #4EC49B;
+  --glow:     rgba(24,160,120,0.14);
+  --bg:       #F3FAF6;
+  --card:     #FFFFFF;
+  --surface:  rgba(24,160,120,0.07);
+  --text:     #08110D;
+  --muted:    #4D6B62;
+  --border:   rgba(11,98,71,0.1);
+  --dark:     #06100C;
+  --sidebar-w: 240px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .4s ease, color .4s ease;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 9998; pointer-events: none; opacity: .025;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+/* ── TOKENS ── */
+*, *::before, *::after { transition: background-color .3s ease, border-color .3s ease, color .3s ease; }
+
+[data-theme="dark"] {
+  --bg:       #060B08;
+  --card:     #111D14;
+  --text:     #E8F4ED;
+  --muted:    #6BA090;
+  --border:   rgba(255,255,255,0.11);
+  --surface:  rgba(78,196,155,0.09);
+  --dark:     #030705;
+  --glow:     rgba(24,160,120,0.13);
+}
+
+/* ── NAV ── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  padding: 14px 48px;
+  background: rgba(243,250,246,0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+[data-theme="dark"] nav {
+  background: rgba(6,11,8,0.94);
+  border-bottom-color: rgba(255,255,255,0.08);
+}
+
+.nav-logo {
+  display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text);
+}
+.nav-wordmark {
+  font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: -.3px;
+}
+.nav-wordmark span { color: var(--accent); }
+
+.nav-links {
+  display: flex; align-items: center; gap: 28px; list-style: none; justify-content: center;
+}
+.nav-links a {
+  font-size: 13.5px; color: var(--muted); text-decoration: none;
+  transition: color .2s; font-weight: 400;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-links a.active { color: var(--accent); font-weight: 500; }
+
+.nav-actions { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+
+.nav-github {
+  font-size: 13px; font-weight: 500; color: var(--text);
+  background: var(--card); border: 1px solid var(--border);
+  padding: 7px 14px; border-radius: 8px; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 7px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.nav-github:hover { border-color: var(--accent); }
+
+.theme-toggle {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--card); border: 1px solid var(--border);
+  cursor: pointer; color: var(--muted); display: flex; align-items: center; justify-content: center;
+  transition: color .2s, border-color .2s;
+}
+.theme-toggle:hover { color: var(--accent); border-color: var(--accent); }
+.icon-sun { display: block; }
+.icon-moon { display: none; }
+[data-theme="dark"] .icon-sun { display: none; }
+[data-theme="dark"] .icon-moon { display: block; }
+
+/* ── DOCS LAYOUT ── */
+.docs-layout {
+  display: flex; align-items: flex-start;
+  max-width: 1200px; margin: 0 auto; padding: 0 32px;
+  gap: 0;
+}
+
+/* ── SIDEBAR ── */
+.docs-sidebar {
+  width: var(--sidebar-w); flex-shrink: 0;
+  position: sticky; top: 66px; height: calc(100vh - 66px);
+  overflow-y: auto; padding: 32px 0 48px;
+  border-right: 1px solid var(--border);
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.docs-sidebar::-webkit-scrollbar { width: 4px; }
+.docs-sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.sidebar-group { margin-bottom: 24px; }
+.sidebar-group-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); padding: 0 20px 8px; display: block;
+  border-bottom: 1px solid var(--border); margin-bottom: 4px;
+}
+.sidebar-link {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 20px; font-size: 13px; color: var(--muted);
+  text-decoration: none; border-right: 2px solid transparent;
+  transition: color .15s, border-color .15s, background .15s;
+  border-radius: 0;
+}
+.sidebar-link:hover { color: var(--text); background: var(--surface); }
+.sidebar-link.active { color: var(--accent); border-right-color: var(--accent); background: var(--surface); font-weight: 500; }
+.sidebar-link code {
+  font-family: 'DM Mono', monospace; font-size: 12px;
+  background: var(--surface); padding: 1px 6px; border-radius: 4px; color: inherit;
+}
+
+/* ── DOCS CONTENT ── */
+.docs-content {
+  flex: 1; min-width: 0;
+  padding: 40px 0 80px 48px;
+  max-width: 760px;
+}
+
+/* ── BREADCRUMB ── */
+.docs-breadcrumb {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; color: var(--muted); margin-bottom: 32px;
+}
+.docs-breadcrumb a { color: var(--muted); text-decoration: none; }
+.docs-breadcrumb a:hover { color: var(--accent); }
+.docs-breadcrumb svg { opacity: .5; }
+
+/* ── SECTIONS ── */
+.docs-section { margin-bottom: 72px; }
+.docs-section:last-child { margin-bottom: 0; }
+
+.docs-section h2 {
+  font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700;
+  letter-spacing: -.5px; color: var(--text);
+  padding-bottom: 14px; border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.docs-section h3 {
+  font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 600;
+  color: var(--text); margin: 32px 0 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+
+.docs-section h4 {
+  font-size: 13px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin: 24px 0 10px;
+}
+
+.docs-section p { margin-bottom: 14px; color: var(--text); }
+.docs-section p:last-child { margin-bottom: 0; }
+
+.docs-section ul, .docs-section ol {
+  padding-left: 20px; margin-bottom: 14px;
+}
+.docs-section li { margin-bottom: 6px; color: var(--text); }
+.docs-section li:last-child { margin-bottom: 0; }
+
+.docs-section a { color: var(--accent); text-decoration: none; }
+.docs-section a:hover { text-decoration: underline; }
+
+/* Inline code */
+.docs-section code {
+  font-family: 'DM Mono', monospace; font-size: 12.5px;
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 1.5px 6px; border-radius: 5px; color: var(--accent);
+}
+
+/* ── CODE BLOCKS ── */
+.code-block {
+  background: var(--dark); border-radius: 10px;
+  padding: 18px 22px; margin: 16px 0;
+  font-family: 'DM Mono', monospace; font-size: 12.5px;
+  line-height: 1.8; overflow-x: auto;
+  border: 1px solid rgba(255,255,255,.07);
+  position: relative;
+}
+.code-block:hover .copy-btn { opacity: 1; }
+.copy-btn {
+  position: absolute; top: 10px; right: 10px;
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 6px;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+  color: rgba(255,255,255,.45); cursor: pointer;
+  font-family: 'DM Mono', monospace; font-size: 10.5px;
+  opacity: 0; transition: opacity .15s, background .15s, color .15s, border-color .15s;
+  white-space: nowrap;
+}
+.copy-btn:hover { background: rgba(78,196,155,.15); border-color: rgba(78,196,155,.35); color: #4EC49B; }
+.copy-btn.copied { background: rgba(78,196,155,.18); border-color: rgba(78,196,155,.4); color: #4EC49B; opacity: 1; }
+.code-block pre { color: rgba(255,255,255,.7); white-space: pre; }
+.code-block .c-cmd  { color: #4EC49B; font-weight: 500; }
+.code-block .c-flag { color: #7BBFFF; }
+.code-block .c-str  { color: #FFD580; }
+.code-block .c-cmt  { color: rgba(255,255,255,.28); font-style: italic; }
+.code-block .c-out  { color: rgba(255,255,255,.45); }
+
+.code-block-label {
+  font-size: 10px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase;
+  color: rgba(255,255,255,.25); margin-bottom: 10px;
+  font-family: 'DM Mono', monospace;
+}
+
+/* ── SYNOPSIS BLOCK ── */
+.synopsis {
+  background: var(--dark); border-radius: 10px;
+  padding: 14px 20px; margin: 16px 0;
+  font-family: 'DM Mono', monospace; font-size: 13px;
+  border: 1px solid rgba(78,196,155,.15);
+  border-left: 3px solid var(--accent);
+  color: rgba(255,255,255,.7);
+  overflow-x: auto; white-space: pre;
+}
+
+/* ── TABLES ── */
+.docs-table-wrap { overflow-x: auto; margin: 16px 0; }
+.docs-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13.5px;
+}
+.docs-table th {
+  text-align: left; padding: 9px 14px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px;
+  color: var(--muted); background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.docs-table td {
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.docs-table tr:last-child td { border-bottom: none; }
+.docs-table td code { font-size: 12px; }
+.docs-table .check { color: var(--accent); font-weight: 600; }
+.docs-table .cross  { color: var(--muted); opacity: .5; }
+
+/* ── CALLOUTS ── */
+.callout {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 14px 16px; border-radius: 10px; margin: 20px 0;
+  font-size: 13.5px; line-height: 1.6;
+}
+.callout-tip    { background: rgba(24,160,120,.07); border: 1px solid rgba(24,160,120,.2); }
+.callout-warn   { background: rgba(251,191,36,.07); border: 1px solid rgba(251,191,36,.25); }
+.callout-note   { background: rgba(99,179,237,.07); border: 1px solid rgba(99,179,237,.2); }
+.callout-icon { flex-shrink: 0; font-size: 15px; line-height: 1.6; }
+.callout-tip .callout-body  { color: var(--text); }
+.callout-warn .callout-body { color: var(--text); }
+.callout-note .callout-body { color: var(--text); }
+.callout strong { color: var(--text); font-weight: 600; }
+
+/* ── BADGES ── */
+.badge {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 20px;
+}
+.badge-free     { background: rgba(24,160,120,.1); color: var(--accent); border: 1px solid rgba(24,160,120,.2); }
+.badge-docker   { background: rgba(99,179,237,.1); color: #63b3ed; border: 1px solid rgba(99,179,237,.2); }
+.badge-ent      { background: rgba(167,139,250,.1); color: #a78bfa; border: 1px solid rgba(167,139,250,.2); }
+.badge-local    { background: rgba(78,196,155,.08); color: var(--light); border: 1px solid rgba(78,196,155,.15); }
+
+/* ── COMMAND NAV ── */
+.cmd-nav {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0;
+}
+.cmd-nav a {
+  font-family: 'DM Mono', monospace; font-size: 12px;
+  background: var(--card); border: 1px solid var(--border);
+  padding: 5px 12px; border-radius: 6px; text-decoration: none; color: var(--muted);
+  transition: color .15s, border-color .15s, background .15s;
+}
+.cmd-nav a:hover { color: var(--accent); border-color: var(--accent); background: var(--surface); }
+
+/* ── DIVIDER ── */
+.docs-divider { height: 1px; background: var(--border); margin: 48px 0; }
+
+/* ── FOOTER ── */
+footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 48px; border-top: 1px solid var(--border);
+  margin-top: 60px;
+}
+.footer-links { display: flex; gap: 20px; }
+.footer-links a { font-size: 12.5px; color: var(--muted); text-decoration: none; transition: color .2s; }
+.footer-links a:hover { color: var(--accent); }
+.footer-copy { font-size: 12px; color: var(--muted); }
+
+/* ── DARK MODE OVERRIDES ── */
+[data-theme="dark"] nav { background: rgba(6,11,8,0.94); }
+[data-theme="dark"] .nav-github { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.09); color: var(--text); }
+[data-theme="dark"] .code-block { border-color: rgba(255,255,255,.07); }
+[data-theme="dark"] .synopsis { border-left-color: var(--accent); border-color: rgba(78,196,155,.18); }
+
+/* ── SEARCH BUTTON (sidebar) ── */
+.sidebar-search-btn {
+  display: flex; align-items: center; gap: 8px;
+  width: calc(100% - 40px); margin: 0 20px 20px;
+  padding: 8px 12px; border-radius: 8px;
+  background: var(--card); border: 1px solid var(--border);
+  cursor: pointer; color: var(--muted);
+  font-family: 'DM Sans', sans-serif; font-size: 12.5px;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.sidebar-search-btn:hover { border-color: var(--accent); background: var(--surface); color: var(--text); }
+.sidebar-search-btn .search-placeholder { flex: 1; text-align: left; }
+.sidebar-search-kbd {
+  display: flex; gap: 2px;
+}
+.sidebar-search-kbd kbd {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 5px; color: var(--muted);
+  line-height: 1.6;
+}
+
+/* ── MOBILE SEARCH BUTTON ── */
+.mobile-search-btn {
+  display: none;
+  align-items: center; gap: 8px;
+  width: 100%; margin-bottom: 12px;
+  padding: 10px 14px; border-radius: 8px;
+  background: var(--card); border: 1px solid var(--border);
+  cursor: pointer; color: var(--muted);
+  font-family: 'DM Sans', sans-serif; font-size: 13px;
+  transition: border-color .15s;
+}
+.mobile-search-btn:hover { border-color: var(--accent); }
+
+/* ── SEARCH MODAL ── */
+.search-overlay {
+  position: fixed; inset: 0; z-index: 600;
+  background: rgba(6,16,12,.7); backdrop-filter: blur(6px);
+  display: flex; flex-direction: column; align-items: center;
+  padding-top: 72px;
+  opacity: 0; pointer-events: none;
+  transition: opacity .18s ease;
+}
+.search-overlay.open { opacity: 1; pointer-events: all; }
+
+.search-modal {
+  width: min(600px, calc(100vw - 32px));
+  background: var(--card); border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 80px rgba(0,0,0,.35), 0 2px 12px rgba(0,0,0,.15);
+  overflow: hidden;
+  transform: translateY(-8px) scale(.98);
+  transition: transform .18s ease;
+}
+.search-overlay.open .search-modal { transform: none; }
+
+.search-input-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+}
+.search-input-icon { color: var(--muted); flex-shrink: 0; }
+.search-input {
+  flex: 1; background: transparent; border: none; outline: none;
+  font-family: 'DM Sans', sans-serif; font-size: 15px;
+  color: var(--text); placeholder-color: var(--muted);
+}
+.search-input::placeholder { color: var(--muted); }
+.search-close-btn {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 2px 8px; font-size: 11px;
+  font-family: 'DM Mono', monospace; color: var(--muted);
+  cursor: pointer; flex-shrink: 0;
+  transition: color .15s, border-color .15s;
+}
+.search-close-btn:hover { color: var(--text); border-color: var(--accent); }
+
+.search-results {
+  max-height: 420px; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.search-results::-webkit-scrollbar { width: 4px; }
+.search-results::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.search-result-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 16px; cursor: pointer;
+  border-bottom: 1px solid var(--border); text-decoration: none;
+  transition: background .1s;
+}
+.search-result-item:last-child { border-bottom: none; }
+.search-result-item:hover, .search-result-item.active {
+  background: var(--surface);
+}
+.search-result-icon {
+  width: 28px; height: 28px; flex-shrink: 0; border-radius: 7px;
+  background: var(--surface); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 1px; color: var(--accent);
+}
+.search-result-body { flex: 1; min-width: 0; }
+.search-result-title {
+  font-size: 13.5px; font-weight: 500; color: var(--text);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.search-result-title mark {
+  background: rgba(24,160,120,.18); color: var(--accent);
+  border-radius: 3px; padding: 0 2px; font-style: normal;
+}
+.search-result-snippet {
+  font-size: 12px; color: var(--muted); margin-top: 2px;
+  overflow: hidden; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  line-height: 1.5;
+}
+.search-result-snippet mark {
+  background: rgba(24,160,120,.13); color: var(--accent);
+  border-radius: 2px; padding: 0 2px; font-style: normal;
+}
+.search-result-crumb {
+  font-size: 10.5px; font-family: 'DM Mono', monospace;
+  color: var(--muted); opacity: .7; flex-shrink: 0;
+  align-self: center;
+}
+.search-arrow {
+  color: var(--muted); flex-shrink: 0; align-self: center;
+  opacity: 0; transition: opacity .1s;
+}
+.search-result-item.active .search-arrow,
+.search-result-item:hover .search-arrow { opacity: 1; }
+
+.search-empty {
+  padding: 48px 20px; text-align: center;
+  color: var(--muted); font-size: 13.5px;
+}
+.search-empty strong { display: block; font-size: 15px; color: var(--text); margin-bottom: 6px; }
+
+.search-footer {
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 16px; border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.search-footer-hint {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--muted);
+}
+.search-footer-hint kbd {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 5px; color: var(--muted);
+}
+.search-count {
+  margin-left: auto; font-size: 11px; color: var(--muted);
+  font-family: 'DM Mono', monospace;
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px) {
+  nav { padding: 14px 20px; }
+  .nav-links { display: none; }
+  .docs-layout { padding: 0 20px; }
+  .docs-sidebar { display: none; }
+  .docs-content { padding: 32px 0 60px; }
+}
+@media(max-width:480px) {
+  nav { padding: 12px 16px; }
+  .docs-content { padding: 24px 0 48px; }
+  .docs-layout { padding: 0 16px; }
+  footer { padding: 20px 16px; flex-direction: column; gap: 12px; align-items: flex-start; }
+}
+
+/* ── MOBILE SIDEBAR TOGGLE ── */
+.sidebar-mobile-toggle {
+  display: none; width: 100%;
+  margin-bottom: 20px; padding: 10px 14px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--muted);
+  align-items: center; justify-content: space-between; gap: 8px;
+}
+.sidebar-mobile-drawer {
+  display: none; margin-bottom: 24px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 0; overflow: hidden;
+}
+.sidebar-mobile-drawer.open { display: block; }
+
+@media(max-width:900px) {
+  .sidebar-mobile-toggle { display: flex; }
+  .mobile-search-btn { display: flex; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ NAV ══════════════════════════════════════════════════════ -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
+      <polygon points="14,1 27,7.5 27,20.5 14,27 1,20.5 1,7.5" fill="#0B6247"/>
+      <polygon points="14,7 21,10.5 21,17.5 14,21 7,17.5 7,10.5" fill="#18A078"/>
+      <polyline points="10,14.5 13,17.5 18.5,11" stroke="#E1F5EE" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    <span class="nav-wordmark">flow<span>save</span></span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html#features">Features</a></li>
+    <li><a href="index.html#how">How it works</a></li>
+    <li><a href="docs.html" class="active">Docs</a></li>
+    <li><a href="index.html#waitlist">Dashboard</a></li>
+  </ul>
+  <div class="nav-actions">
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
+      <svg class="icon-sun" width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3.2 3.2l1.1 1.1M10.7 10.7l1.1 1.1M10.7 3.2l-1.1 1.1M4.3 10.7l-1.1 1.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <svg class="icon-moon" width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M12.5 9.5A6 6 0 015.5 2.5a6 6 0 000 10 6 6 0 007-3z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <a href="https://github.com/achahid19/flowsave" target="_blank" rel="noopener" class="nav-github">
+      <svg width="14" height="14" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1C3.91 1 1 3.91 1 7.5c0 2.88 1.87 5.32 4.46 6.19.33.06.45-.14.45-.31v-1.11c-1.81.39-2.19-.87-2.19-.87-.3-.75-.73-.95-.73-.95-.6-.4.05-.39.05-.39.66.05 1.01.67 1.01.67.59 1 1.54.71 1.92.54.06-.42.23-.71.42-.87-1.45-.16-2.97-.73-2.97-3.23 0-.71.26-1.29.67-1.74-.07-.17-.29-.83.06-1.72 0 0 .55-.17 1.8.67.52-.14 1.08-.21 1.64-.21.56 0 1.12.07 1.64.21 1.25-.84 1.8-.67 1.8-.67.36.89.13 1.55.06 1.72.42.45.67 1.03.67 1.74 0 2.5-1.52 3.06-2.97 3.23.23.2.44.6.44 1.21v1.79c0 .17.12.38.45.31C11.13 12.82 13 10.38 13 7.5 13 3.91 10.09 1 7.5 1z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<!-- ═══ DOCS LAYOUT ══════════════════════════════════════════════ -->
+<div class="docs-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="docs-sidebar">
+    <button class="sidebar-search-btn" onclick="openSearch()" aria-label="Search documentation">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M9.5 9.5l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <span class="search-placeholder">Search docs…</span>
+      <span class="sidebar-search-kbd"><kbd>⌘</kbd><kbd>K</kbd></span>
+    </button>
+    <div class="sidebar-group">
+      <span class="sidebar-group-label">Getting started</span>
+      <a href="#overview" class="sidebar-link">Overview</a>
+      <a href="#installation" class="sidebar-link">Installation</a>
+      <a href="#quickstart" class="sidebar-link">Quick start</a>
+      <a href="#concepts" class="sidebar-link">Core concepts</a>
+    </div>
+    <div class="sidebar-group">
+      <span class="sidebar-group-label">Commands</span>
+      <a href="#config" class="sidebar-link"><code>config</code></a>
+      <a href="#backup" class="sidebar-link"><code>backup</code></a>
+      <a href="#restore" class="sidebar-link"><code>restore</code></a>
+      <a href="#migrate" class="sidebar-link"><code>migrate</code></a>
+      <a href="#list" class="sidebar-link"><code>list</code></a>
+      <a href="#show" class="sidebar-link"><code>show</code></a>
+      <a href="#diff" class="sidebar-link"><code>diff</code></a>
+      <a href="#delete" class="sidebar-link"><code>delete</code></a>
+      <a href="#prune" class="sidebar-link"><code>prune</code></a>
+      <a href="#push" class="sidebar-link"><code>push</code></a>
+      <a href="#doctor" class="sidebar-link"><code>doctor</code></a>
+    </div>
+    <div class="sidebar-group">
+      <span class="sidebar-group-label">Reference</span>
+      <a href="#configuration" class="sidebar-link">Configuration</a>
+      <a href="#security" class="sidebar-link">Security model</a>
+      <a href="#storage" class="sidebar-link">Storage layout</a>
+      <a href="#errors" class="sidebar-link">Exit codes</a>
+      <a href="#editions" class="sidebar-link">Edition compatibility</a>
+    </div>
+    <div class="sidebar-group">
+      <span class="sidebar-group-label">Help</span>
+      <a href="#faq" class="sidebar-link">Troubleshooting</a>
+      <a href="#glossary" class="sidebar-link">Glossary</a>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="docs-content">
+
+    <!-- Mobile: search -->
+    <button class="mobile-search-btn" onclick="openSearch()" aria-label="Search documentation">
+      <svg width="15" height="15" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M9.5 9.5l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Search documentation…
+    </button>
+
+    <!-- Mobile: on this page toggle -->
+    <button class="sidebar-mobile-toggle" onclick="toggleMobileSidebar()" id="sidebar-toggle">
+      <span>On this page</span>
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="sidebar-mobile-drawer" id="sidebar-drawer">
+      <a href="#overview" class="sidebar-link" onclick="closeMobileSidebar()">Overview</a>
+      <a href="#installation" class="sidebar-link" onclick="closeMobileSidebar()">Installation</a>
+      <a href="#quickstart" class="sidebar-link" onclick="closeMobileSidebar()">Quick start</a>
+      <a href="#concepts" class="sidebar-link" onclick="closeMobileSidebar()">Core concepts</a>
+      <a href="#config" class="sidebar-link" onclick="closeMobileSidebar()"><code>config</code></a>
+      <a href="#backup" class="sidebar-link" onclick="closeMobileSidebar()"><code>backup</code></a>
+      <a href="#restore" class="sidebar-link" onclick="closeMobileSidebar()"><code>restore</code></a>
+      <a href="#migrate" class="sidebar-link" onclick="closeMobileSidebar()"><code>migrate</code></a>
+      <a href="#list" class="sidebar-link" onclick="closeMobileSidebar()"><code>list</code></a>
+      <a href="#show" class="sidebar-link" onclick="closeMobileSidebar()"><code>show</code></a>
+      <a href="#diff" class="sidebar-link" onclick="closeMobileSidebar()"><code>diff</code></a>
+      <a href="#delete" class="sidebar-link" onclick="closeMobileSidebar()"><code>delete</code></a>
+      <a href="#prune" class="sidebar-link" onclick="closeMobileSidebar()"><code>prune</code></a>
+      <a href="#push" class="sidebar-link" onclick="closeMobileSidebar()"><code>push</code></a>
+      <a href="#doctor" class="sidebar-link" onclick="closeMobileSidebar()"><code>doctor</code></a>
+      <a href="#configuration" class="sidebar-link" onclick="closeMobileSidebar()">Configuration</a>
+      <a href="#security" class="sidebar-link" onclick="closeMobileSidebar()">Security model</a>
+      <a href="#storage" class="sidebar-link" onclick="closeMobileSidebar()">Storage layout</a>
+      <a href="#errors" class="sidebar-link" onclick="closeMobileSidebar()">Exit codes</a>
+      <a href="#editions" class="sidebar-link" onclick="closeMobileSidebar()">Edition compatibility</a>
+      <a href="#faq" class="sidebar-link" onclick="closeMobileSidebar()">Troubleshooting</a>
+      <a href="#glossary" class="sidebar-link" onclick="closeMobileSidebar()">Glossary</a>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section id="overview" class="docs-section">
+      <h2>Overview</h2>
+      <p>Flowsave is an open-source CLI for self-hosted <a href="https://n8n.io" target="_blank" rel="noopener">n8n</a> instances. It snapshots your workflows, folder structure, and encrypted credentials to local disk, lets you compare and restore any snapshot, migrate a full instance to a new server in one command, and optionally version your backups in a Git repository.</p>
+      <p><strong>Who it's for:</strong> n8n self-hosters — anyone running n8n in Docker, on a VPS, or on bare metal who has ever lost a workflow to a bad upgrade, a deleted container, or an accidental edit.</p>
+      <h3>Design principles</h3>
+      <ul>
+        <li><strong>Local-first.</strong> All snapshots live on your machine. No telemetry, no phoning home, no account required.</li>
+        <li><strong>Credentials are sacred.</strong> Always encrypted at rest (AES-256-GCM), never in logs, never pushed to git.</li>
+        <li><strong>One binary, zero dependencies.</strong> The npm package is a single self-contained file.</li>
+        <li><strong>Honest output.</strong> Every command ends with a summary that says exactly what happened — including what <em>didn't</em> happen and why.</li>
+      </ul>
+    </section>
+
+    <!-- INSTALLATION -->
+    <section id="installation" class="docs-section">
+      <h2>Installation</h2>
+      <div class="code-block"><pre><span class="c-cmd">npm</span> install -g flowsave-cli</pre></div>
+      <ul>
+        <li>The npm package is <code>flowsave-cli</code>; the installed command is <code>flowsave</code>.</li>
+        <li>Requires <strong>Node.js ≥ 18</strong>.</li>
+        <li>The n8n instance must be reachable over HTTP(S) from the machine running Flowsave.</li>
+      </ul>
+
+      <h3>Docker requirement (credential backup only)</h3>
+      <p>Workflow backup needs only the n8n REST API. <strong>Credential</strong> backup and restore additionally use <code>docker exec</code> to call the n8n CLI inside the container. On Linux, Docker must be usable without <code>sudo</code>:</p>
+      <div class="code-block">
+        <div class="code-block-label">Linux one-time setup</div>
+        <pre><span class="c-cmd">sudo</span> usermod -aG docker $USER   <span class="c-cmt"># then log out and back in</span></pre>
+      </div>
+      <p>macOS with Docker Desktop requires nothing — it already runs as the current user. Run <code>flowsave doctor</code> to verify the entire setup before taking your first backup.</p>
+    </section>
+
+    <!-- QUICK START -->
+    <section id="quickstart" class="docs-section">
+      <h2>Quick start</h2>
+      <p>Three commands to go from zero to your first verified snapshot:</p>
+      <div class="code-block">
+        <pre><span class="c-cmd">flowsave</span> config init      <span class="c-cmt"># one-time interactive setup</span>
+<span class="c-cmd">flowsave</span> backup           <span class="c-cmt"># take your first snapshot</span>
+<span class="c-cmd">flowsave</span> list             <span class="c-cmt"># see all snapshots</span></pre>
+      </div>
+    </section>
+
+    <!-- CORE CONCEPTS -->
+    <section id="concepts" class="docs-section">
+      <h2>Core concepts</h2>
+
+      <h3>Snapshot</h3>
+      <p>A point-in-time copy of an n8n instance: all workflows as individual JSON files, optional folder structure, optional encrypted credentials, and metadata. Snapshots get sequential integer IDs (<code>1</code>, <code>2</code>, <code>3</code>, …) and live under the configured backup directory.</p>
+
+      <h3>Configuration</h3>
+      <p>A single JSON file at <code>~/.flowsave/config.json</code>, created by the interactive wizard (<code>flowsave config init</code>). All commands read it; commands that require it exit with a pointer to <code>config init</code> if it is missing.</p>
+
+      <h3>Credential encryption</h3>
+      <p>Credentials are exported from the n8n container, encrypted with a user-supplied passphrase, and stored as a single opaque blob. <strong>The passphrase is never stored anywhere.</strong> Flowsave cannot recover credentials if it is lost — this is a feature, not a limitation. Workflows are not encrypted and are unaffected by a lost passphrase.</p>
+
+      <h3>Two credential transport paths</h3>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Path</th><th>How it works</th><th>Limitation</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-docker">Docker</span></td>
+              <td><code>docker exec</code> into the container, runs <code>n8n export/import:credentials</code>. Handles all credential types including OAuth.</td>
+              <td>Requires Docker to be running locally and the container to be accessible.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-local">API</span></td>
+              <td>n8n REST API. No Docker needed; works across machines.</td>
+              <td><strong>OAuth credentials may fail</strong> schema validation — their exported data contains internal token state the API rejects. Failures are listed by name so you can re-add them manually.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>n8n editions</h3>
+      <p>The folder REST API is an n8n <strong>Enterprise</strong> feature. On Community edition, backups are complete but <em>flat</em> — folder layout is not preserved. Flowsave detects this and says so in every relevant summary.</p>
+    </section>
+
+    <div class="docs-divider"></div>
+
+    <!-- COMMANDS HEADER -->
+    <section class="docs-section" style="margin-bottom:32px">
+      <h2>Command reference</h2>
+      <p>Jump to any command:</p>
+      <div class="cmd-nav">
+        <a href="#config">config</a><a href="#backup">backup</a><a href="#restore">restore</a>
+        <a href="#migrate">migrate</a><a href="#list">list</a><a href="#show">show</a>
+        <a href="#diff">diff</a><a href="#delete">delete</a><a href="#prune">prune</a>
+        <a href="#push">push</a><a href="#doctor">doctor</a>
+      </div>
+    </section>
+
+    <!-- CONFIG -->
+    <section id="config" class="docs-section">
+      <h2><code>flowsave config</code></h2>
+      <p>Manage the configuration file at <code>~/.flowsave/config.json</code>. Three subcommands: <code>init</code>, <code>show</code>, and <code>set</code>.</p>
+
+      <h3><code>flowsave config init</code></h3>
+      <p>Interactive setup wizard. Run once after installing.</p>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Prompt</th><th>Default</th><th>Validation</th></tr></thead>
+          <tbody>
+            <tr><td>n8n instance URL</td><td><code>http://localhost:5678</code></td><td>Must parse as a valid URL</td></tr>
+            <tr><td>API key <small>(n8n Settings → API)</small></td><td>—</td><td>Required, non-empty; input masked with <code>*</code></td></tr>
+            <tr><td>Docker container name</td><td>blank</td><td>Optional — blank disables credential backup</td></tr>
+            <tr><td>Backup directory</td><td><code>~/.flowsave/backups</code></td><td>—</td></tr>
+            <tr><td>Git remote URL</td><td>blank</td><td>Optional — blank disables <code>flowsave push</code></td></tr>
+            <tr><td>Git branch</td><td><code>main</code></td><td>Only asked if a git remote was entered</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout callout-note">
+        <span class="callout-icon">ℹ</span>
+        <div class="callout-body">If a config already exists, <code>init</code> asks <strong>"Overwrite?"</strong> (default No) before touching anything. It makes no API calls — connectivity is verified by <code>flowsave doctor</code> or the first <code>backup</code>.</div>
+      </div>
+
+      <h3><code>flowsave config show</code></h3>
+      <p>Prints the current configuration with the <strong>API key masked</strong> (first 8 + last 4 characters visible). Also prints the config file path. Exits 1 with a pointer to <code>config init</code> if no config exists.</p>
+
+      <h3><code>flowsave config set &lt;key&gt; &lt;value&gt;</code></h3>
+      <p>Updates a single field without re-running the wizard. Valid keys: <code>instanceUrl</code>, <code>apiKey</code>, <code>containerName</code>, <code>backupDir</code>, <code>gitRemote</code>, <code>gitBranch</code>, <code>dashboardToken</code>. Any other key exits 1 and lists the valid keys.</p>
+      <div class="code-block">
+        <pre><span class="c-cmd">flowsave</span> config set gitRemote git@github.com:you/n8n-backups.git
+<span class="c-cmd">flowsave</span> config set gitBranch backups
+<span class="c-cmd">flowsave</span> config set containerName n8n</pre>
+      </div>
+    </section>
+
+    <!-- BACKUP -->
+    <section id="backup" class="docs-section">
+      <h2><code>flowsave backup</code> <span class="badge badge-free">free</span></h2>
+      <p>Snapshot all workflows and (optionally) encrypted credentials from the configured instance.</p>
+      <div class="synopsis">flowsave backup</div>
+      <p>No flags. Credential backup is controlled entirely by config and an interactive prompt.</p>
+
+      <h4>Interactive behavior</h4>
+      <p>Only shown when <code>containerName</code> is configured:</p>
+      <ol>
+        <li>Prompt: <em>"Set a passphrase to encrypt credentials (leave blank to skip):"</em> — masked input, validated inline against the passphrase policy. Blank skips credentials entirely.</li>
+        <li>Prompt: <em>"Confirm passphrase:"</em> — must match exactly; mismatch <strong>aborts with exit 1 before anything is written</strong>.</li>
+      </ol>
+
+      <h4>Output — Snapshot Summary</h4>
+      <ul>
+        <li>Snapshot ID, instance URL, n8n version (when detectable via Docker), timestamp, workflow count</li>
+        <li>Folder structure: <code>✓ included</code> / <code>✗ not included</code> (Enterprise-only feature)</li>
+        <li>Credentials: <code>✓ encrypted &amp; included</code> / <code>— not included</code></li>
+        <li>Snapshot size, saved-to path</li>
+      </ul>
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠</span>
+        <div class="callout-body"><strong>Retention warning:</strong> when a passphrase is used, Flowsave prints the exact restore command needed later. Credentials in that snapshot are permanently locked to the passphrase entered — there is no recovery path if it is lost.</div>
+      </div>
+
+      <h4>Exit codes</h4>
+      <p><code>0</code> success · <code>1</code> passphrase mismatch, connectivity failure, or any backup error.</p>
+    </section>
+
+    <!-- RESTORE -->
+    <section id="restore" class="docs-section">
+      <h2><code>flowsave restore</code> <span class="badge badge-free">free</span></h2>
+      <p>Restore a snapshot to the same instance or to a different one.</p>
+      <div class="code-block">
+        <pre><span class="c-cmd">flowsave</span> restore 3                                          <span class="c-cmt"># same-instance</span>
+<span class="c-cmd">flowsave</span> restore <span class="c-flag">--snap</span> 3                                    <span class="c-cmt"># identical — flag form</span>
+<span class="c-cmd">flowsave</span> restore 3 <span class="c-flag">--to</span> http://new:5678 <span class="c-flag">--api-key</span> <span class="c-str">&lt;key&gt;</span>      <span class="c-cmt"># cross-instance</span>
+<span class="c-cmd">flowsave</span> restore 3 <span class="c-flag">--to</span> http://new:5678 <span class="c-flag">--api-key</span> <span class="c-str">&lt;key&gt;</span> \
+  <span class="c-flag">--target-container</span> n8n-new <span class="c-flag">--passphrase</span> <span class="c-str">&lt;pass&gt;</span>             <span class="c-cmt"># cross-instance + Docker creds</span></pre>
+      </div>
+
+      <h4>Flags</h4>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>[id]</code> positional</td><td>Snapshot ID to restore</td></tr>
+            <tr><td><code>--snap &lt;id&gt;</code></td><td>Alternative to the positional argument</td></tr>
+            <tr><td><code>--to &lt;url&gt;</code></td><td>Target instance URL — switches to cross-instance mode</td></tr>
+            <tr><td><code>--api-key &lt;key&gt;</code></td><td>Target API key — required with <code>--to</code>, rejected without it</td></tr>
+            <tr><td><code>--target-container &lt;name&gt;</code></td><td>Local Docker container for cross-instance credential import (handles OAuth and all types)</td></tr>
+            <tr><td><code>--passphrase &lt;key&gt;</code></td><td>Passphrase to decrypt the snapshot's credentials</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Same-instance vs. cross-instance</h4>
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠</span>
+        <div class="callout-body"><strong>Cross-instance always creates new workflows</strong> — it never updates by ID. Re-running will duplicate everything. The CLI prints this notice on every cross-instance run. Use <code>flowsave diff</code> before migrating again to check what changed.</div>
+      </div>
+      <ul>
+        <li><strong>Same-instance</strong> (no <code>--to</code>): workflows are updated/created by ID; stale credentials absent from the snapshot are automatically deleted after Docker import.</li>
+        <li><strong>Cross-instance</strong> (<code>--to</code>): always creates new workflows (<code>forceCreate</code>).</li>
+      </ul>
+
+      <h4>Exit codes</h4>
+      <p><code>0</code> success · <code>1</code> validation or restore error.</p>
+    </section>
+
+    <!-- MIGRATE -->
+    <section id="migrate" class="docs-section">
+      <h2><code>flowsave migrate</code> <span class="badge badge-free">free</span></h2>
+      <p>Take a <strong>fresh backup of the live source instance</strong> and restore it to a destination in one command. Always migrates current state — for a historical snapshot use <code>restore --to</code> instead.</p>
+      <div class="code-block">
+        <pre><span class="c-cmd">flowsave</span> migrate <span class="c-flag">--to</span> http://new:5678 <span class="c-flag">--api-key</span> <span class="c-str">&lt;key&gt;</span>
+<span class="c-cmd">flowsave</span> migrate <span class="c-flag">--to</span> http://new:5678 <span class="c-flag">--api-key</span> <span class="c-str">&lt;key&gt;</span> <span class="c-flag">--passphrase</span> <span class="c-str">&lt;pass&gt;</span>
+<span class="c-cmd">flowsave</span> migrate <span class="c-flag">--to</span> http://new:5678 <span class="c-flag">--api-key</span> <span class="c-str">&lt;key&gt;</span> \
+  <span class="c-flag">--target-container</span> n8n-new <span class="c-flag">--passphrase</span> <span class="c-str">&lt;pass&gt;</span></pre>
+      </div>
+
+      <h4>Flags</h4>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>--to &lt;url&gt;</code></td><td class="check">✓</td><td>Destination n8n instance URL</td></tr>
+            <tr><td><code>--api-key &lt;key&gt;</code></td><td class="check">✓</td><td>Destination n8n API key</td></tr>
+            <tr><td><code>--target-container &lt;name&gt;</code></td><td>—</td><td>Local Docker container for credential import (OAuth-safe path)</td></tr>
+            <tr><td><code>--passphrase &lt;key&gt;</code></td><td>—</td><td>Passphrase for credential encryption/decryption</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout-note">
+        <span class="callout-icon">ℹ</span>
+        <div class="callout-body"><strong>Why migrate asks to "set" (not "enter") a passphrase:</strong> migrate creates a fresh backup, so there is no existing encryption to validate against. The passphrase entered becomes the new encryption for this snapshot. Confirmation prevents a typo from permanently locking the credentials.</div>
+      </div>
+      <p>Progress: spinner shows <em>"Step 1/2: Backing up source instance…"</em> then <em>"Step 2/2: Restoring to destination instance…"</em>. The migration leaves a normal restorable snapshot behind.</p>
+
+      <h4>Exit codes</h4>
+      <p><code>0</code> success · <code>1</code> passphrase mismatch, missing required flags, or any step failing.</p>
+    </section>
+
+    <!-- LIST -->
+    <section id="list" class="docs-section">
+      <h2><code>flowsave list</code> <span class="badge badge-local">local</span></h2>
+      <p>List all local snapshots in a table, newest first. No API calls.</p>
+      <div class="synopsis">flowsave list</div>
+      <p>Columns: <strong>ID · Timestamp · Size · Instance URL</strong> (truncated at 40 chars). Empty state prints: <em>"No snapshots yet. Run 'flowsave backup' to take your first snapshot."</em></p>
+    </section>
+
+    <!-- SHOW -->
+    <section id="show" class="docs-section">
+      <h2><code>flowsave show &lt;id&gt;</code> <span class="badge badge-local">local</span></h2>
+      <p>Full details of one snapshot. No API calls.</p>
+      <div class="synopsis">flowsave show 3</div>
+      <p>Output includes: date, instance, n8n version (when recorded), workflow count, size, credentials line, folder backup flag, credentials table (names + types, no secrets), and a workflows table with name, active status, node count, folder path, and tags.</p>
+      <h4>Exit codes</h4>
+      <p><code>0</code> success · <code>1</code> invalid or unknown snapshot ID.</p>
+    </section>
+
+    <!-- DIFF -->
+    <section id="diff" class="docs-section">
+      <h2><code>flowsave diff &lt;id1&gt; &lt;id2&gt;</code> <span class="badge badge-local">local</span></h2>
+      <p>Compare two snapshots. No API calls.</p>
+      <div class="synopsis">flowsave diff 3 5</div>
+      <p>Reports added/removed workflows by name, and for modified workflows shows field-level context: node count changes, activation toggles, and renames. When both snapshots carry credential metadata, also reports added and removed credentials by name and type.</p>
+      <h4>Known limitations</h4>
+      <ul>
+        <li>Credential diff tracks <strong>presence only</strong> (by ID). Renames are invisible — the data is encrypted; the name is metadata.</li>
+        <li>A credential type change appears as remove + add, matching how n8n itself requires delete-and-recreate.</li>
+      </ul>
+      <h4>Exit codes</h4>
+      <p><code>0</code> success · <code>1</code> non-integer IDs or unknown snapshots.</p>
+    </section>
+
+    <!-- DELETE -->
+    <section id="delete" class="docs-section">
+      <h2><code>flowsave delete &lt;id&gt; [id…]</code></h2>
+      <p>Permanently delete one or more snapshots from disk and the local index.</p>
+      <div class="code-block">
+        <pre><span class="c-cmd">flowsave</span> delete 3
+<span class="c-cmd">flowsave</span> delete 19 14 13
+<span class="c-cmd">flowsave</span> delete 19 14 13 <span class="c-flag">--yes</span></pre>
+      </div>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>-y, --yes</code></td><td>Skip the confirmation prompt</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Accepts multiple IDs; duplicates are de-duplicated. Unknown IDs are each reported; if some IDs are valid the command continues with those. Without <code>--yes</code>, prints the full list and asks once — default <strong>No</strong>.</p>
+      <h4>Exit codes</h4>
+      <p><code>0</code> success or user-aborted · <code>1</code> invalid/missing IDs.</p>
+    </section>
+
+    <!-- PRUNE -->
+    <section id="prune" class="docs-section">
+      <h2><code>flowsave prune</code></h2>
+      <p>Remove snapshots whose content is identical to a newer snapshot — keeps the most recent copy of each distinct state.</p>
+      <div class="code-block">
+        <pre><span class="c-cmd">flowsave</span> prune               <span class="c-cmt"># preview + confirm</span>
+<span class="c-cmd">flowsave</span> prune <span class="c-flag">--dry-run</span>     <span class="c-cmt"># preview only, no changes</span>
+<span class="c-cmd">flowsave</span> prune <span class="c-flag">--yes</span>         <span class="c-cmt"># no confirmation prompt</span></pre>
+      </div>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>--dry-run</code></td><td>Show candidates without deleting anything</td></tr>
+            <tr><td><code>-y, --yes</code></td><td>Skip the confirmation prompt</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>"Identical" means: zero workflows added, removed, or modified <em>and</em> zero credentials added or removed.</p>
+
+      <h4>How the algorithm works</h4>
+      <p>Prune walks <strong>newest → oldest</strong>, comparing each snapshot only to the last distinct reference — not the absolute newest. This preserves the last restore point before every deletion/change event.</p>
+      <div class="code-block">
+        <div class="code-block-label">Example: 6 snapshots, only 3 pruned</div>
+        <pre><span class="c-cmt">#2  9 creds (Airtable present)   ← kept — differs from #3</span>
+<span class="c-cmt">#3  8 creds (Airtable removed)   ← kept — differs from #6</span>
+<span class="c-out">#4  9 creds                      ← pruned (≡ #6)</span>
+<span class="c-out">#5  9 creds                      ← pruned (≡ #6)</span>
+<span class="c-cmt">#6  9 creds (Airtable re-added)  ← kept (newest)</span></pre>
+      </div>
+      <h4>Exit codes</h4>
+      <p><code>0</code> success, nothing-to-do, or user-aborted · <code>1</code> on errors.</p>
+    </section>
+
+    <!-- PUSH -->
+    <section id="push" class="docs-section">
+      <h2><code>flowsave push</code></h2>
+      <p>Commit the latest snapshot to a git repository and push it to the configured remote.</p>
+      <div class="synopsis">flowsave push</div>
+      <p>No flags. Configure the remote first:</p>
+      <div class="code-block">
+        <pre><span class="c-cmd">flowsave</span> config set gitRemote git@github.com:you/n8n-backups.git
+<span class="c-cmd">flowsave</span> config set gitBranch backups   <span class="c-cmt"># optional, default: main</span></pre>
+      </div>
+      <h4>Key behaviors</h4>
+      <ul>
+        <li>The remote repo <strong>does not need to exist as a branch beforehand</strong> — Flowsave initializes a local git repo on first push and creates the remote branch automatically.</li>
+        <li>A <code>.gitignore</code> is written automatically so <strong>encrypted credential blobs (<code>_credentials.enc.json</code>) never enter git</strong> — only workflow JSON and snapshot metadata are committed.</li>
+        <li>Commit message format: <code>chore: flowsave backup &lt;ISO-timestamp&gt; snapshot-&lt;id&gt;</code></li>
+        <li>Always pushes even with no new commit — so changing <code>gitBranch</code> propagates to the remote.</li>
+        <li>Git authentication is yours (SSH keys / credential store) — Flowsave never touches or stores git credentials.</li>
+      </ul>
+      <h4>Exit codes</h4>
+      <p><code>0</code> success · <code>1</code> no <code>gitRemote</code> configured or no snapshots exist.</p>
+    </section>
+
+    <!-- DOCTOR -->
+    <section id="doctor" class="docs-section">
+      <h2><code>flowsave doctor</code></h2>
+      <p>Diagnose the local setup. Runs four checks, each reported as ✓/✗. Never throws.</p>
+      <div class="synopsis">flowsave doctor</div>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>#</th><th>Check</th><th>Pass condition</th><th>Failure detail</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Config</td><td><code>~/.flowsave/config.json</code> exists and validates</td><td>Validation message; subsequent checks are skipped</td></tr>
+            <tr><td>2</td><td>n8n instance</td><td><code>GET /api/v1/workflows?limit=1</code> succeeds within 5s</td><td>Distinguishes <code>401</code> (connected but API key invalid) from network errors</td></tr>
+            <tr><td>3</td><td>Docker <em>(if containerName set)</em></td><td>Daemon reachable without sudo <em>and</em> named container is running</td><td>Permission-denied gets the exact fix: <code>sudo usermod -aG docker $USER</code> + relogin</td></tr>
+            <tr><td>4</td><td>Backup dir</td><td>Directory exists/creatable and writable</td><td>Path and reason</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h4>Exit codes</h4>
+      <p><code>0</code> all checks pass · <code>1</code> any check fails (with count).</p>
+    </section>
+
+    <div class="docs-divider"></div>
+
+    <!-- CONFIGURATION REFERENCE -->
+    <section id="configuration" class="docs-section">
+      <h2>Configuration reference</h2>
+      <p>File: <code>~/.flowsave/config.json</code> — created by <code>config init</code>, edited by <code>config set</code>, readable via <code>config show</code>.</p>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Key</th><th>Required</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>instanceUrl</code></td><td class="check">✓</td><td><code>http://localhost:5678</code></td><td>Base URL of the n8n instance</td></tr>
+            <tr><td><code>apiKey</code></td><td class="check">✓</td><td>—</td><td>n8n API key (n8n Settings → API). Masked in all output.</td></tr>
+            <tr><td><code>containerName</code></td><td>—</td><td>unset</td><td>Docker container name. Enables credential backup/restore via <code>docker exec</code>. Optional — omit for workflow-only backups.</td></tr>
+            <tr><td><code>backupDir</code></td><td class="check">✓</td><td><code>~/.flowsave/backups</code></td><td>Local snapshot storage. <code>~</code> is expanded.</td></tr>
+            <tr><td><code>gitRemote</code></td><td>—</td><td>unset</td><td>Git remote URL for <code>flowsave push</code>.</td></tr>
+            <tr><td><code>gitBranch</code></td><td>—</td><td><code>main</code></td><td>Branch pushed to.</td></tr>
+            <tr><td><code>dashboardToken</code></td><td>—</td><td>unset</td><td>Reserved for agent/dashboard connectivity (upcoming).</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECURITY -->
+    <section id="security" class="docs-section">
+      <h2>Security model</h2>
+
+      <h3>Encryption at rest</h3>
+      <ul>
+        <li><strong>Cipher:</strong> AES-256-GCM (authenticated encryption — tampering is detected, not just hidden)</li>
+        <li><strong>Key derivation:</strong> scrypt, cost N=16384, r=8, p=1 — deliberately slow against brute force</li>
+        <li><strong>Per-snapshot randomness:</strong> fresh 32-byte salt and 12-byte IV on every encryption</li>
+        <li><strong>Blob layout:</strong> <code>[salt 32B][iv 12B][authTag 16B][ciphertext]</code> — one self-contained file, <code>_credentials.enc.json</code></li>
+      </ul>
+
+      <h3>Passphrase policy</h3>
+      <p>Enforced in core — no CLI path can bypass it:</p>
+      <ul>
+        <li>Minimum <strong>12 characters</strong></li>
+        <li>At least one <strong>uppercase</strong> letter</li>
+        <li>At least one <strong>lowercase</strong> letter</li>
+        <li>At least one <strong>digit or special character</strong></li>
+      </ul>
+      <p>Validation happens inline in the prompt (immediate feedback) and again inside <code>encrypt()</code>.</p>
+
+      <h3>Passphrase lifecycle</h3>
+      <ul>
+        <li>Entered twice (set + confirm) for <code>backup</code> and <code>migrate</code>; mismatch aborts before anything is written</li>
+        <li><strong>Never stored, never logged, never in error messages, never in any persisted file</strong></li>
+        <li>Lost passphrase = unrecoverable credentials for that snapshot, by design. Workflows are unaffected.</li>
+      </ul>
+
+      <h3>What never leaves your machine</h3>
+      <ul>
+        <li>Encrypted credential blobs are excluded from <code>flowsave push</code> via <code>.gitignore</code></li>
+        <li>No telemetry of any kind — the only network calls are to your own n8n instances and your own git remote</li>
+      </ul>
+    </section>
+
+    <!-- STORAGE -->
+    <section id="storage" class="docs-section">
+      <h2>Storage layout</h2>
+      <div class="code-block">
+        <pre>~/.flowsave/
+├── config.json                  <span class="c-cmt"># configuration (API key in plain text — local file)</span>
+├── index.json                   <span class="c-cmt"># snapshot index: id, timestamp, instanceUrl, sizeBytes</span>
+└── backups/                     <span class="c-cmt"># = backupDir (configurable)</span>
+    ├── .git/                    <span class="c-cmt"># created by flowsave push (optional)</span>
+    ├── .gitignore               <span class="c-cmt"># excludes _credentials.enc.json</span>
+    └── &lt;id&gt;/                   <span class="c-cmt"># one directory per snapshot</span>
+        ├── meta.json            <span class="c-cmt"># snapshot metadata (counts, versions, flags)</span>
+        ├── &lt;Workflow Name&gt;.json <span class="c-cmt"># one file per workflow (root = no folder)</span>
+        ├── &lt;Folder&gt;/…          <span class="c-cmt"># subdirectories mirror n8n folders (Enterprise)</span>
+        ├── _credentials.enc.json   <span class="c-cmt"># encrypted credential blob (optional)</span>
+        └── _credentials.meta.json  <span class="c-cmt"># credential names+types, NO secrets (optional)</span></pre>
+      </div>
+      <p>Workflow JSON files are the <strong>raw n8n export format</strong> — they round-trip losslessly and are readable in any editor or git UI.</p>
+    </section>
+
+    <!-- ERRORS -->
+    <section id="errors" class="docs-section">
+      <h2>Error handling &amp; exit codes</h2>
+      <p>Flowsave never shows a stack trace. Every error message is human-readable with an actionable hint when one exists.</p>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Situation</th><th>Message style</th><th>Hint</th></tr></thead>
+          <tbody>
+            <tr><td>Invalid/missing config</td><td>The specific validation error</td><td>Run <code>flowsave config init</code></td></tr>
+            <tr><td>Network failure (ECONNREFUSED, ETIMEDOUT, etc.)</td><td><code>Cannot reach n8n instance: &lt;detail&gt;</code></td><td>Run <code>flowsave doctor</code></td></tr>
+            <tr><td>Wrong passphrase on restore</td><td>Decryption failure (GCM auth tag mismatch)</td><td>—</td></tr>
+            <tr><td>Anything else</td><td>The error's own message</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h4>Exit code summary</h4>
+      <ul>
+        <li><code>0</code> — success, nothing-to-do, or user answered "No" to a confirmation</li>
+        <li><code>1</code> — any validation failure, aborted passphrase confirmation, failed health check, or runtime error</li>
+      </ul>
+      <p>Exit codes are stable and suitable for use in scripts and cron jobs.</p>
+    </section>
+
+    <!-- EDITIONS -->
+    <section id="editions" class="docs-section">
+      <h2>Edition compatibility</h2>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Feature</th><th>Community (free)</th><th>Enterprise</th></tr></thead>
+          <tbody>
+            <tr><td>Workflow backup &amp; restore</td><td class="check">✓</td><td class="check">✓</td></tr>
+            <tr><td>Credential backup (source)</td><td>✓ requires Docker on source</td><td class="check">✓</td></tr>
+            <tr><td>Credential restore — same-instance</td><td>✓ docker exec + auto-prune stale</td><td class="check">✓</td></tr>
+            <tr><td>Credential restore — cross-instance (API)</td><td>✓ simple creds; OAuth may fail</td><td class="check">✓</td></tr>
+            <tr><td>Credential restore — cross-instance (Docker)</td><td>✓ with <code>--target-container</code></td><td class="check">✓</td></tr>
+            <tr><td>Folder structure in backup</td><td class="cross">✗</td><td class="check">✓</td></tr>
+            <tr><td>Folder structure on restore</td><td class="cross">✗</td><td class="check">✓</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The folder REST API is license-gated by n8n. Community backups lose nothing — the layout is simply flat.</p>
+    </section>
+
+    <div class="docs-divider"></div>
+
+    <!-- FAQ -->
+    <section id="faq" class="docs-section">
+      <h2>Troubleshooting</h2>
+
+      <h3>"Cannot reach n8n instance"</h3>
+      <p>Run <code>flowsave doctor</code>. It checks the URL, API key (distinguishes an invalid key from a network failure), Docker, and backup directory in one run.</p>
+
+      <h3>"Permission denied" on credential backup (Linux)</h3>
+      <p>Your user isn't in the <code>docker</code> group. Fix:</p>
+      <div class="code-block"><pre><span class="c-cmd">sudo</span> usermod -aG docker $USER   <span class="c-cmt"># then log out and back in</span></pre></div>
+      <p>Doctor detects and prints exactly this fix.</p>
+
+      <h3>OAuth credentials failed during cross-instance restore/migrate</h3>
+      <p>Expected behavior on the API path — their exported data carries internal token state the n8n API rejects. Either re-add them manually in the target UI, or re-run with <code>--target-container &lt;name&gt;</code> if the destination container is locally accessible (the Docker path has no schema restrictions).</p>
+
+      <h3>I forgot the passphrase for snapshot N</h3>
+      <p>Credentials in that snapshot are unrecoverable — nothing is stored that could recover them, by design. Workflows are unaffected. Take a new backup with a new passphrase.</p>
+
+      <h3>Re-running migrate/cross-instance restore duplicated my workflows</h3>
+      <p>Documented behavior: cross-instance operations always create, never update. Compare first with <code>flowsave diff</code>, then clean up duplicates on the target manually.</p>
+
+      <h3><code>flowsave push</code> says nothing changed but I switched branches</h3>
+      <p>It still pushes. The remote branch is created or updated even without a new commit.</p>
+
+      <h3>Snapshot says "names not available — older snapshot"</h3>
+      <p>Credential name metadata (<code>_credentials.meta.json</code>) was introduced after that snapshot was taken. The credentials themselves are intact and fully restorable.</p>
+
+      <h3>Why doesn't my snapshot show the n8n version?</h3>
+      <p>Version detection needs <code>docker exec</code> (the public REST API doesn't expose it). Configure <code>containerName</code> to record it.</p>
+    </section>
+
+    <!-- GLOSSARY -->
+    <section id="glossary" class="docs-section">
+      <h2>Glossary</h2>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Snapshot</strong></td><td>One point-in-time backup with a sequential integer ID.</td></tr>
+            <tr><td><strong>Same-instance restore</strong></td><td>Restore to the configured instance; updates workflows by ID.</td></tr>
+            <tr><td><strong>Cross-instance restore</strong></td><td>Restore to another instance (<code>--to</code>); always creates new workflows.</td></tr>
+            <tr><td><strong>Docker path</strong></td><td>Credential transport via <code>docker exec</code> + n8n CLI; handles all credential types.</td></tr>
+            <tr><td><strong>API path</strong></td><td>Credential transport via n8n REST API; no Docker needed, OAuth-limited.</td></tr>
+            <tr><td><strong>Prune</strong></td><td>Removal of consecutive content-identical snapshots.</td></tr>
+            <tr><td><strong>Retention warning</strong></td><td>Post-backup/migrate notice that the snapshot's credentials are locked to the entered passphrase.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ═══ FOOTER ══════════════════════════════════════════════════ -->
+<footer>
+  <div class="footer-links">
+    <a href="index.html">Home</a>
+    <a href="docs.html">Docs</a>
+    <a href="https://github.com/achahid19/flowsave" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/achahid19/flowsave/discussions" target="_blank" rel="noopener">Community</a>
+  </div>
+  <span class="footer-copy">© 2026 Flowsave · MIT License</span>
+</footer>
+
+<!-- ═══ SEARCH MODAL ════════════════════════════════════════════ -->
+<div class="search-overlay" id="search-overlay" onclick="handleOverlayClick(event)">
+  <div class="search-modal" role="dialog" aria-modal="true" aria-label="Search documentation">
+    <div class="search-input-row">
+      <svg class="search-input-icon" width="16" height="16" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M9.5 9.5l2.5 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <input class="search-input" id="search-input" type="text" placeholder="Search commands, flags, concepts…" autocomplete="off" spellcheck="false">
+      <button class="search-close-btn" onclick="closeSearch()">Esc</button>
+    </div>
+    <div class="search-results" id="search-results" role="listbox"></div>
+    <div class="search-footer">
+      <span class="search-footer-hint"><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+      <span class="search-footer-hint"><kbd>↵</kbd> go to section</span>
+      <span class="search-footer-hint"><kbd>Esc</kbd> close</span>
+      <span class="search-count" id="search-count"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Dark mode ── */
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+})();
+
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', isDark ? '' : 'dark');
+  localStorage.setItem('theme', isDark ? 'light' : 'dark');
+}
+
+/* ── Search ── */
+let searchIndex = [];
+let activeResultIdx = -1;
+
+function buildSearchIndex() {
+  const sections = document.querySelectorAll('.docs-section[id]');
+  searchIndex = Array.from(sections).map(section => {
+    const id = section.id;
+    const h2 = section.querySelector('h2');
+    const title = h2 ? h2.textContent.replace(/\s+/g, ' ').trim() : id;
+
+    // collect h3 subheadings
+    const subs = Array.from(section.querySelectorAll('h3')).map(h => h.textContent.replace(/\s+/g, ' ').trim());
+
+    // collect flag/table content
+    const tableCells = Array.from(section.querySelectorAll('td, th')).map(c => c.textContent.trim()).join(' ');
+
+    // collect all text, clean whitespace
+    const raw = section.textContent.replace(/\s+/g, ' ').trim();
+
+    // determine type badge
+    const badge = ['config','backup','restore','migrate','list','show','diff','delete','prune','push','doctor'].includes(id)
+      ? 'command' : 'section';
+
+    return { id, title, subs, raw, tableCells, badge };
+  });
+}
+
+function highlight(text, query) {
+  if (!query) return escHtml(text);
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return escHtml(text).replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="search-highlight">$1</mark>');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function getSnippet(raw, query) {
+  const lower = raw.toLowerCase();
+  const qLower = query.toLowerCase();
+  const idx = lower.indexOf(qLower);
+  if (idx === -1) return raw.slice(0, 120) + '…';
+  const start = Math.max(0, idx - 40);
+  const end = Math.min(raw.length, idx + query.length + 80);
+  return (start > 0 ? '…' : '') + raw.slice(start, end) + (end < raw.length ? '…' : '');
+}
+
+function scoreResult(item, q) {
+  const ql = q.toLowerCase();
+  let score = 0;
+  if (item.title.toLowerCase() === ql) score += 100;
+  else if (item.title.toLowerCase().startsWith(ql)) score += 60;
+  else if (item.title.toLowerCase().includes(ql)) score += 40;
+  if (item.subs.some(s => s.toLowerCase().includes(ql))) score += 20;
+  if (item.tableCells.toLowerCase().includes(ql)) score += 10;
+  if (item.raw.toLowerCase().includes(ql)) score += 5;
+  return score;
+}
+
+function runSearch(query) {
+  const q = query.trim();
+  const resultsEl = document.getElementById('search-results');
+  const countEl = document.getElementById('search-count');
+  activeResultIdx = -1;
+
+  if (!q) {
+    resultsEl.innerHTML = '';
+    countEl.textContent = '';
+    return;
+  }
+
+  const matches = searchIndex
+    .map(item => ({ item, score: scoreResult(item, q) }))
+    .filter(r => r.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10)
+    .map(r => r.item);
+
+  countEl.textContent = matches.length ? `${matches.length} result${matches.length > 1 ? 's' : ''}` : '';
+
+  if (!matches.length) {
+    resultsEl.innerHTML = `<div class="search-empty"><strong>No results for "${escHtml(q)}"</strong>Try a command name, flag, or concept like "passphrase" or "backup".</div>`;
+    return;
+  }
+
+  const icons = {
+    command: `<svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="3" width="11" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4 7l1.5 1.5L8 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    section: `<svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="2" y="1.5" width="10" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 5h5M4.5 7.5h5M4.5 10h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`
+  };
+
+  resultsEl.innerHTML = matches.map((item, i) => {
+    const snippet = getSnippet(item.raw, q);
+    return `<a href="#${item.id}" class="search-result-item" data-idx="${i}" onclick="closeSearch()">
+      <div class="search-result-icon">${icons[item.badge]}</div>
+      <div class="search-result-body">
+        <div class="search-result-title">
+          ${highlight(item.title, q)}
+          <span class="search-result-crumb">#${item.id}</span>
+        </div>
+        <div class="search-result-snippet">${highlight(snippet, q)}</div>
+      </div>
+      <svg class="search-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>`;
+  }).join('');
+
+  // mouse hover keeps active state in sync
+  resultsEl.querySelectorAll('.search-result-item').forEach((el, i) => {
+    el.addEventListener('mouseenter', () => {
+      activeResultIdx = i;
+      updateActiveResult();
+    });
+  });
+}
+
+function updateActiveResult() {
+  document.querySelectorAll('#search-results .search-result-item').forEach((el, i) => {
+    el.classList.toggle('active', i === activeResultIdx);
+    if (i === activeResultIdx) el.scrollIntoView({ block: 'nearest' });
+  });
+}
+
+function navigateResults(dir) {
+  const items = document.querySelectorAll('#search-results .search-result-item');
+  if (!items.length) return;
+  activeResultIdx = Math.max(0, Math.min(items.length - 1, activeResultIdx + dir));
+  updateActiveResult();
+}
+
+function activateSelected() {
+  const active = document.querySelector('#search-results .search-result-item.active');
+  if (active) { active.click(); }
+}
+
+function openSearch() {
+  document.getElementById('search-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  const input = document.getElementById('search-input');
+  input.value = '';
+  document.getElementById('search-results').innerHTML = '';
+  document.getElementById('search-count').textContent = '';
+  activeResultIdx = -1;
+  setTimeout(() => input.focus(), 60);
+}
+
+function closeSearch() {
+  document.getElementById('search-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('search-overlay')) closeSearch();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  buildSearchIndex();
+  initCopyButtons();
+
+  document.getElementById('search-input').addEventListener('input', e => runSearch(e.target.value));
+
+  document.addEventListener('keydown', e => {
+    const overlay = document.getElementById('search-overlay');
+    if ((e.key === 'k' && (e.metaKey || e.ctrlKey))) { e.preventDefault(); overlay.classList.contains('open') ? closeSearch() : openSearch(); return; }
+    if (!overlay.classList.contains('open')) return;
+    if (e.key === 'Escape') { closeSearch(); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); navigateResults(1); return; }
+    if (e.key === 'ArrowUp') { e.preventDefault(); navigateResults(-1); return; }
+    if (e.key === 'Enter') { e.preventDefault(); activateSelected(); return; }
+  });
+});
+
+/* ── Copy buttons ── */
+function initCopyButtons() {
+  document.querySelectorAll('.code-block').forEach(block => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.setAttribute('aria-label', 'Copy code');
+    btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.2" stroke="currentColor" stroke-width="1.2"/><path d="M2.5 8H2a1 1 0 01-1-1V2a1 1 0 011-1h5a1 1 0 011 1v.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Copy`;
+    btn.addEventListener('click', () => {
+      const text = block.querySelector('pre') ? block.querySelector('pre').innerText : block.innerText;
+      navigator.clipboard.writeText(text.trim()).then(() => {
+        btn.classList.add('copied');
+        btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Copied!`;
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.2" stroke="currentColor" stroke-width="1.2"/><path d="M2.5 8H2a1 1 0 01-1-1V2a1 1 0 011-1h5a1 1 0 011 1v.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Copy`;
+        }, 2000);
+      });
+    });
+    block.appendChild(btn);
+  });
+}
+
+/* ── Sidebar active state ── */
+const sidebarLinks = document.querySelectorAll('.docs-sidebar .sidebar-link, .sidebar-mobile-drawer .sidebar-link');
+const sections = document.querySelectorAll('.docs-section[id], .docs-layout section[id]');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      sidebarLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+      });
+    }
+  });
+}, { rootMargin: '-10% 0px -80% 0px', threshold: 0 });
+
+sections.forEach(s => observer.observe(s));
+
+/* ── Mobile sidebar ── */
+function toggleMobileSidebar() {
+  const drawer = document.getElementById('sidebar-drawer');
+  const btn = document.getElementById('sidebar-toggle');
+  const open = drawer.classList.toggle('open');
+  btn.querySelector('svg').style.transform = open ? 'rotate(180deg)' : '';
+}
+function closeMobileSidebar() {
+  document.getElementById('sidebar-drawer').classList.remove('open');
+  document.getElementById('sidebar-toggle').querySelector('svg').style.transform = '';
+}
+</script>
+</body>
+</html>
