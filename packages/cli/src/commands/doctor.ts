@@ -9,7 +9,7 @@ import { accessSync, constants, mkdirSync } from 'fs';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
 import type { Command } from 'commander';
-import { readConfig, ConfigValidationError, expandHome } from '@flowsave/core';
+import { readConfig, ConfigValidationError, expandHome, getConfigPath } from '@flowsave/core';
 
 interface CheckResult {
   label: string;
@@ -26,7 +26,7 @@ function checkConfig(): CheckResult {
     const config = readConfig();
     return {
       label: 'Config',
-      detail: `${config.instanceUrl}`,
+      detail: getConfigPath(),
       ok: true,
     };
   } catch (err) {

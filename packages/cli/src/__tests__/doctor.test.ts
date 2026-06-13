@@ -6,6 +6,7 @@ import { Command } from 'commander';
 // ---------------------------------------------------------------------------
 const mocks = vi.hoisted(() => ({
   readConfig: vi.fn(),
+  getConfigPath: vi.fn(() => '/Users/test/.flowsave/config.json'),
   expandHome: vi.fn((p: string) => p),
   ConfigValidationError: class extends Error {
     constructor(msg: string) { super(msg); this.name = 'ConfigValidationError'; }
@@ -18,6 +19,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@flowsave/core', () => ({
   readConfig: mocks.readConfig,
+  getConfigPath: mocks.getConfigPath,
   expandHome: mocks.expandHome,
   ConfigValidationError: mocks.ConfigValidationError,
 }));
