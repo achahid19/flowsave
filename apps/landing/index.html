@@ -1009,26 +1009,12 @@ footer {
         <div class="tdot tdot-g"></div>
         <span class="term-title">flowsave-cli — bash</span>
       </div>
-      <div class="term-body">
-        <span><span class="term-prompt">$ </span><span class="term-cmd">flowsave backup</span></span>
-        <span class="term-out">✔  Connected to http://localhost:5678</span>
-        <span class="term-out">✔  Fetched 47 workflows</span>
-        <span class="term-out">✔  Credentials encrypted with AES-256-GCM</span>
-        <span class="term-out term-ok">✔  Snapshot #183 saved  (1.4 MB, 0.7s)</span>
-        <span class="term-blank"></span>
-        <span><span class="term-prompt">$ </span><span class="term-cmd">flowsave list</span></span>
-        <span class="term-out"> ID   Timestamp              Workflows   Size</span>
-        <span class="term-out term-ok"> 183  2026-06-12 14:03:21    47          2.1 MB  ← latest</span>
-        <span class="term-out"> 182  2026-06-12 13:03:17    46          2.0 MB</span>
-        <span class="term-out"> 181  2026-06-12 12:03:09    46          2.0 MB</span>
-        <span class="term-blank"></span>
-        <span><span class="term-prompt">$ </span><span class="term-cmd">flowsave diff 181 183</span></span>
-        <span class="term-out term-ok"> + 1 added    Email Automation</span>
-        <span class="term-out"> ~ 2 modified  Slack Notifier, Daily Report</span>
-        <span class="term-out term-dim"> = 44 unchanged</span>
-        <span class="term-blank"></span>
-        <span><span class="term-prompt">$ </span><span class="term-cursor"></span></span>
-      </div>
+      <img
+        src="flowsave-demo.gif"
+        alt="Flowsave demo: backup, push, list, and restore n8n workflows in seconds"
+        style="width:100%;display:block;border-radius:0 0 14px 14px;"
+        loading="lazy"
+      />
     </div>
   </div>
 </section>

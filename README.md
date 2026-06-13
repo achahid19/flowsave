@@ -2,6 +2,8 @@
 
 > The backup, restore, and migration layer that n8n never built.
 
+![Flowsave demo](https://raw.githubusercontent.com/achahid19/flowsave/main/docs/flowsave-demo.gif)
+
 Flowsave is an open-source CLI, self-hosted agent, and paid SaaS dashboard for n8n self-hosters. Never lose a workflow again.
 
 ## Install
