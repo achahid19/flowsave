@@ -516,23 +516,81 @@ footer {
   footer { padding: 20px 16px; flex-direction: column; gap: 12px; align-items: flex-start; }
 }
 
-/* ── MOBILE SIDEBAR TOGGLE ── */
-.sidebar-mobile-toggle {
-  display: none; width: 100%;
-  margin-bottom: 20px; padding: 10px 14px;
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--muted);
-  align-items: center; justify-content: space-between; gap: 8px;
+/* ── NAV HAMBURGER (mobile) ── */
+.nav-hamburger {
+  display: none; width: 36px; height: 36px; border-radius: 8px;
+  background: transparent; border: 1px solid var(--border);
+  cursor: pointer; color: var(--text); align-items: center; justify-content: center;
+  transition: border-color .2s, background .2s;
+  flex-shrink: 0;
 }
-.sidebar-mobile-drawer {
-  display: none; margin-bottom: 24px;
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 10px; padding: 12px 0; overflow: hidden;
+.nav-hamburger:hover { border-color: var(--accent); background: var(--surface); }
+.hb-wrap { display: flex; flex-direction: column; gap: 4px; }
+.hb-line { display: block; width: 14px; height: 1.5px; background: currentColor; border-radius: 2px; transition: transform .25s, opacity .2s; }
+.nav-hamburger.open .hb-line:nth-child(1) { transform: translateY(5.5px) rotate(45deg); }
+.nav-hamburger.open .hb-line:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.nav-hamburger.open .hb-line:nth-child(3) { transform: translateY(-5.5px) rotate(-45deg); }
+
+/* ── MOBILE NAV DRAWER ── */
+.mobile-nav-overlay {
+  display: none; position: fixed; inset: 0; z-index: 300;
+  background: rgba(6,16,12,.55); backdrop-filter: blur(3px);
 }
-.sidebar-mobile-drawer.open { display: block; }
+.mobile-nav-overlay.open { display: block; }
+.mobile-nav-drawer {
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 301;
+  width: 280px; background: var(--bg);
+  border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 20px 0 40px;
+  transform: translateX(-100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+}
+.mobile-nav-overlay.open .mobile-nav-drawer { transform: translateX(0); }
+.mobile-nav-drawer::-webkit-scrollbar { width: 3px; }
+.mobile-nav-drawer::-webkit-scrollbar-thumb { background: var(--border); }
+.mobile-nav-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px 16px; border-bottom: 1px solid var(--border); margin-bottom: 8px;
+}
+.mobile-nav-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+  color: var(--text); text-decoration: none;
+}
+.mobile-nav-logo span { color: var(--accent); }
+.mobile-nav-close {
+  width: 28px; height: 28px; border-radius: 6px;
+  background: var(--surface); border: 1px solid var(--border);
+  cursor: pointer; color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: color .15s, border-color .15s;
+}
+.mobile-nav-close:hover { color: var(--text); border-color: var(--accent); }
+.mobile-nav-search {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 16px 16px; padding: 9px 12px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; cursor: pointer; color: var(--muted);
+  font-family: 'DM Sans', sans-serif; font-size: 12.5px;
+  transition: border-color .15s;
+}
+.mobile-nav-search:hover { border-color: var(--accent); }
+.mobile-nav-group { padding: 0 16px; margin-bottom: 20px; }
+.mobile-nav-label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
+  color: var(--muted); padding: 0 4px; margin-bottom: 4px; display: block;
+}
+.mobile-nav-link {
+  display: block; padding: 8px 10px; border-radius: 7px;
+  font-size: 13.5px; color: var(--muted); text-decoration: none;
+  transition: background .15s, color .15s; margin-bottom: 1px;
+}
+.mobile-nav-link:hover { background: var(--surface); color: var(--text); }
+.mobile-nav-link.active { color: var(--accent); background: var(--surface); font-weight: 500; }
+.mobile-nav-link code { font-family: 'DM Mono', monospace; font-size: 12px; }
 
 @media(max-width:900px) {
-  .sidebar-mobile-toggle { display: flex; }
+  .nav-hamburger { display: flex; }
   .mobile-search-btn { display: flex; }
 }
 </style>
@@ -556,6 +614,13 @@ footer {
     <li><a href="index.html#waitlist">Dashboard</a></li>
   </ul>
   <div class="nav-actions">
+    <button class="nav-hamburger" id="nav-hamburger" onclick="openMobileNav()" aria-label="Open navigation">
+      <span class="hb-wrap">
+        <span class="hb-line"></span>
+        <span class="hb-line"></span>
+        <span class="hb-line"></span>
+      </span>
+    </button>
     <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
       <svg class="icon-sun" width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3.2 3.2l1.1 1.1M10.7 10.7l1.1 1.1M10.7 3.2l-1.1 1.1M4.3 10.7l-1.1 1.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       <svg class="icon-moon" width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M12.5 9.5A6 6 0 015.5 2.5a6 6 0 000 10 6 6 0 007-3z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -621,13 +686,7 @@ footer {
       <svg width="15" height="15" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M9.5 9.5l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       Search documentation…
     </button>
-
-    <!-- Mobile: on this page toggle -->
-    <button class="sidebar-mobile-toggle" onclick="toggleMobileSidebar()" id="sidebar-toggle">
-      <span>On this page</span>
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-    <div class="sidebar-mobile-drawer" id="sidebar-drawer">
+    <div style="display:none" id="sidebar-drawer">
       <a href="#overview" class="sidebar-link" onclick="closeMobileSidebar()">Overview</a>
       <a href="#installation" class="sidebar-link" onclick="closeMobileSidebar()">Installation</a>
       <a href="#quickstart" class="sidebar-link" onclick="closeMobileSidebar()">Quick start</a>
@@ -1203,8 +1262,61 @@ footer {
     <a href="https://github.com/achahid19/flowsave" target="_blank" rel="noopener">GitHub</a>
     <a href="https://github.com/achahid19/flowsave/discussions" target="_blank" rel="noopener">Community</a>
   </div>
-  <span class="footer-copy">© 2026 Flowsave · MIT License</span>
+  <span class="footer-copy">© 2026 Flowsave · Elastic License 2.0 (ELv2)</span>
 </footer>
+
+<!-- ═══ MOBILE NAV DRAWER ══════════════════════════════════════ -->
+<div class="mobile-nav-overlay" id="mobile-nav-overlay" onclick="handleMobileNavClick(event)">
+  <div class="mobile-nav-drawer">
+    <div class="mobile-nav-header">
+      <a href="index.html" class="mobile-nav-logo">
+        <svg width="22" height="22" viewBox="0 0 28 28" fill="none"><polygon points="14,1 27,7.5 27,20.5 14,27 1,20.5 1,7.5" fill="#0B6247"/><polygon points="14,7 21,10.5 21,17.5 14,21 7,17.5 7,10.5" fill="#18A078"/><polyline points="10,14.5 13,17.5 18.5,11" stroke="#E1F5EE" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        flow<span>save</span>
+      </a>
+      <button class="mobile-nav-close" onclick="closeMobileNav()" aria-label="Close navigation">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <button class="mobile-nav-search" onclick="closeMobileNav(); openSearch();">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M9.5 9.5l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Search docs… <kbd style="margin-left:auto;font-family:'DM Mono',monospace;font-size:10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--muted)">⌘K</kbd>
+    </button>
+    <div class="mobile-nav-group">
+      <span class="mobile-nav-label">Getting started</span>
+      <a href="#overview" class="mobile-nav-link" onclick="closeMobileNav()">Overview</a>
+      <a href="#installation" class="mobile-nav-link" onclick="closeMobileNav()">Installation</a>
+      <a href="#quickstart" class="mobile-nav-link" onclick="closeMobileNav()">Quick start</a>
+      <a href="#concepts" class="mobile-nav-link" onclick="closeMobileNav()">Core concepts</a>
+    </div>
+    <div class="mobile-nav-group">
+      <span class="mobile-nav-label">Commands</span>
+      <a href="#config" class="mobile-nav-link" onclick="closeMobileNav()"><code>config</code></a>
+      <a href="#backup" class="mobile-nav-link" onclick="closeMobileNav()"><code>backup</code></a>
+      <a href="#restore" class="mobile-nav-link" onclick="closeMobileNav()"><code>restore</code></a>
+      <a href="#migrate" class="mobile-nav-link" onclick="closeMobileNav()"><code>migrate</code></a>
+      <a href="#list" class="mobile-nav-link" onclick="closeMobileNav()"><code>list</code></a>
+      <a href="#show" class="mobile-nav-link" onclick="closeMobileNav()"><code>show</code></a>
+      <a href="#diff" class="mobile-nav-link" onclick="closeMobileNav()"><code>diff</code></a>
+      <a href="#delete" class="mobile-nav-link" onclick="closeMobileNav()"><code>delete</code></a>
+      <a href="#prune" class="mobile-nav-link" onclick="closeMobileNav()"><code>prune</code></a>
+      <a href="#push" class="mobile-nav-link" onclick="closeMobileNav()"><code>push</code></a>
+      <a href="#doctor" class="mobile-nav-link" onclick="closeMobileNav()"><code>doctor</code></a>
+    </div>
+    <div class="mobile-nav-group">
+      <span class="mobile-nav-label">Reference</span>
+      <a href="#configuration" class="mobile-nav-link" onclick="closeMobileNav()">Configuration</a>
+      <a href="#security" class="mobile-nav-link" onclick="closeMobileNav()">Security model</a>
+      <a href="#storage" class="mobile-nav-link" onclick="closeMobileNav()">Storage layout</a>
+      <a href="#errors" class="mobile-nav-link" onclick="closeMobileNav()">Exit codes</a>
+      <a href="#editions" class="mobile-nav-link" onclick="closeMobileNav()">Edition compatibility</a>
+    </div>
+    <div class="mobile-nav-group">
+      <span class="mobile-nav-label">Help</span>
+      <a href="#faq" class="mobile-nav-link" onclick="closeMobileNav()">Troubleshooting</a>
+      <a href="#glossary" class="mobile-nav-link" onclick="closeMobileNav()">Glossary</a>
+    </div>
+  </div>
+</div>
 
 <!-- ═══ SEARCH MODAL ════════════════════════════════════════════ -->
 <div class="search-overlay" id="search-overlay" onclick="handleOverlayClick(event)">
@@ -1406,6 +1518,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'ArrowUp') { e.preventDefault(); navigateResults(-1); return; }
     if (e.key === 'Enter') { e.preventDefault(); activateSelected(); return; }
   });
+});
+
+/* ── Mobile nav drawer ── */
+function openMobileNav() {
+  document.getElementById('mobile-nav-overlay').classList.add('open');
+  document.getElementById('nav-hamburger').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeMobileNav() {
+  document.getElementById('mobile-nav-overlay').classList.remove('open');
+  document.getElementById('nav-hamburger').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function handleMobileNavClick(e) {
+  if (e.target === document.getElementById('mobile-nav-overlay')) closeMobileNav();
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeMobileNav();
 });
 
 /* ── Copy buttons ── */
