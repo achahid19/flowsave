@@ -23,7 +23,7 @@ interface CheckResult {
 
 function checkConfig(): CheckResult {
   try {
-    const config = readConfig();
+    readConfig();
     return {
       label: 'Config',
       detail: getConfigPath(),
