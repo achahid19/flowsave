@@ -25,6 +25,9 @@ packages/cli/CLAUDE.md
 packages/agent/CLAUDE.md
 apps/dashboard/CLAUDE.md
 
+# Marketing / launch drafts (internal — not for the public repo)
+adoption/
+
 # OS
 .DS_Store
 Thumbs.db
