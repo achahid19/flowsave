@@ -7,13 +7,13 @@
 <meta name="description" content="Open-source CLI to backup, restore, and migrate your n8n instance. Snapshot workflows, encrypt credentials, restore in seconds. Free forever.">
 <link rel="canonical" href="https://flowsave.space/">
 <meta property="og:title" content="Flowsave — The backup layer n8n never built">
-<meta property="og:description" content="Never lose a workflow again. Open-source CLI for n8n self-hosters.">
+<meta property="og:description" content="Never lose a workflow again. Open-source CLI for n8n — self-hosted or cloud. Workflow backup works everywhere; credential backup requires Docker.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://flowsave.space/">
 <meta property="og:site_name" content="Flowsave">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Flowsave — The backup layer n8n never built">
-<meta name="twitter:description" content="Never lose a workflow again. Open-source CLI for n8n self-hosters.">
+<meta name="twitter:description" content="Never lose a workflow again. Open-source CLI for n8n — self-hosted or cloud. Workflow backup works everywhere; credential backup requires Docker.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -1160,7 +1160,7 @@ footer { padding: 40px var(--pad-x); border-top: 1px solid var(--border); displa
           <div><div class="compat-name">n8n Cloud</div><div class="compat-sub">Managed by n8n</div></div>
           <div class="compat-check">✅</div>
           <div class="compat-check" style="font-size:16px;color:rgba(255,255,255,.3)">—</div>
-          <div class="compat-cell-note">n8n holds the encryption key. Credential export is impossible on any tool — a platform limitation.</div>
+          <div class="compat-cell-note">Workflow backup works via the REST API. Credential backup is unavailable — the REST API only returns metadata, not secret values, and n8n Cloud doesn't allow container access.</div>
         </div>
       </div>
     </div>

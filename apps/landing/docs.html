@@ -767,8 +767,8 @@ footer {
     <!-- OVERVIEW -->
     <section id="overview" class="docs-section">
       <h2>Overview</h2>
-      <p>Flowsave is an open-source CLI for self-hosted <a href="https://n8n.io" target="_blank" rel="noopener">n8n</a> instances. It snapshots your workflows, folder structure, and encrypted credentials to local disk, lets you compare and restore any snapshot, migrate a full instance to a new server in one command, and optionally version your backups in a Git repository.</p>
-      <p><strong>Who it's for:</strong> n8n self-hosters — anyone running n8n in Docker, on a VPS, or on bare metal who has ever lost a workflow to a bad upgrade, a deleted container, or an accidental edit.</p>
+      <p>Flowsave is an open-source CLI for <a href="https://n8n.io" target="_blank" rel="noopener">n8n</a> — self-hosted or cloud. It snapshots your workflows, folder structure, and encrypted credentials to local disk, lets you compare and restore any snapshot, migrate a full instance to a new server in one command, and optionally version your backups in a Git repository.</p>
+      <p><strong>Who it's for:</strong> Anyone running n8n — in Docker, on a VPS, on bare metal, or on n8n Cloud — who has ever lost a workflow to a bad upgrade, a deleted container, or an accidental edit. <strong>Note:</strong> credential backup requires Docker access and is unavailable on n8n Cloud. Workflow backup works on all setups via the REST API.</p>
       <h3>Design principles</h3>
       <ul>
         <li><strong>Local-first.</strong> All snapshots live on your machine. No telemetry, no phoning home, no account required.</li>
