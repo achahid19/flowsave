@@ -1,6 +1,6 @@
 # Flowsave
 
-> The backup layer your n8n instance is missing.
+> The backup, restore, and migration layer that n8n instance is missing.
 
 ![Flowsave demo](https://raw.githubusercontent.com/achahid19/flowsave/main/docs/flowsave-demo.gif)
 
