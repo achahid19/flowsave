@@ -124,13 +124,15 @@ export async function pushToGit(
     }
   }
 
-  // 2. Stage all changes in the snapshot directory
-  runGit(['add', snapshotPath], { cwd: repoDir });
+  // 2. Stage all changes across the entire backup directory — including deletions
+  // of snapshots that were pruned or removed locally. git add <snapshotPath>
+  // would only stage the one directory passed in, so deleted sibling snapshots
+  // would never propagate to the remote.
+  runGit(['add', '--all'], { cwd: repoDir });
 
-  // 3. Commit — use a standard message format
+  // 3. Commit — reflects the full sync state, not a single snapshot
   const timestamp = new Date().toISOString();
-  const snapshotId = snapshotPath.split('/').pop() ?? 'unknown';
-  const message = `chore: flowsave backup ${timestamp} snapshot-${snapshotId}`;
+  const message = `chore: flowsave sync ${timestamp}`;
 
   // Check if the snapshot files were actually staged (not the whole working tree,
   // which may have untracked/deleted files from previously pruned snapshots).
