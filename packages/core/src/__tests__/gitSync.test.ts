@@ -57,7 +57,7 @@ describe('pushToGit', () => {
       encoding: 'utf-8',
     });
     expect(log.status).toBe(0);
-    expect(log.stdout.trim()).toMatch(/flowsave backup/);
+    expect(log.stdout.trim()).toMatch(/flowsave sync/);
   });
 
   it('creates a .gitignore that excludes _credentials.enc.json', async () => {
@@ -123,6 +123,24 @@ describe('pushToGit', () => {
     const cloneDir = join(tmpDir, 'clone');
     spawnSync('git', ['clone', remoteUrl, cloneDir], { encoding: 'utf-8' });
     expect(existsSync(join(cloneDir, '1', '_credentials.enc.json'))).toBe(false);
+  });
+
+  it('propagates deletion of a snapshot to the remote', async () => {
+    const snap1 = makeSnapshot(backupDir, 1);
+    await pushToGit(snap1, remoteUrl, 'main');
+
+    const snap2 = makeSnapshot(backupDir, 2);
+    await pushToGit(snap2, remoteUrl, 'main');
+
+    // Delete snapshot 2 locally, then push again via snap1
+    rmSync(snap2, { recursive: true });
+    await pushToGit(snap1, remoteUrl, 'main');
+
+    // Clone and verify snapshot 2 is gone from the remote
+    const cloneDir = join(tmpDir, 'clone');
+    spawnSync('git', ['clone', remoteUrl, cloneDir], { encoding: 'utf-8' });
+    expect(existsSync(join(cloneDir, '2'))).toBe(false);
+    expect(existsSync(join(cloneDir, '1'))).toBe(true);
   });
 
   it('throws GitSyncError when snapshot path does not exist', async () => {
