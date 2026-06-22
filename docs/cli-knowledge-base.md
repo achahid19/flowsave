@@ -9,7 +9,7 @@
 
 ## 1. Product overview
 
-**One-liner:** The backup, restore, and migration layer that n8n instance is missing.
+**One-liner:** The backup, restore, and migration layer your n8n instance is missing.
 
 **What it is:** Flowsave is an open-source CLI for self-hosted [n8n](https://n8n.io) instances. It snapshots your workflows, folder structure, and encrypted credentials to local disk, lets you compare and restore any snapshot, migrate a full instance to a new server in one command, and optionally version your backups in a Git repository.
 
