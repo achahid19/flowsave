@@ -746,7 +746,7 @@ footer {
       <a href="#security" class="sidebar-link">Security model</a>
       <a href="#storage" class="sidebar-link">Storage layout</a>
       <a href="#errors" class="sidebar-link">Exit codes</a>
-      <a href="#editions" class="sidebar-link">Edition compatibility</a>
+      <a href="#folder-compat" class="sidebar-link">Folder structure support</a>
     </div>
     <div class="sidebar-group">
       <span class="sidebar-group-label">Help</span>
@@ -783,7 +783,7 @@ footer {
       <a href="#security" class="sidebar-link" onclick="closeMobileSidebar()">Security model</a>
       <a href="#storage" class="sidebar-link" onclick="closeMobileSidebar()">Storage layout</a>
       <a href="#errors" class="sidebar-link" onclick="closeMobileSidebar()">Exit codes</a>
-      <a href="#editions" class="sidebar-link" onclick="closeMobileSidebar()">Edition compatibility</a>
+      <a href="#folder-compat" class="sidebar-link" onclick="closeMobileSidebar()">Folder structure support</a>
       <a href="#faq" class="sidebar-link" onclick="closeMobileSidebar()">Troubleshooting</a>
       <a href="#glossary" class="sidebar-link" onclick="closeMobileSidebar()">Glossary</a>
     </div>
@@ -791,7 +791,7 @@ footer {
     <!-- OVERVIEW -->
     <section id="overview" class="docs-section">
       <h2>Overview</h2>
-      <p>Flowsave is an open-source CLI for <a href="https://n8n.io" target="_blank" rel="noopener">n8n</a> — self-hosted or cloud. It snapshots your workflows, encrypted credentials, and folder structure (n8n Enterprise or Cloud only — see <a href="#editions">compatibility</a>) to local disk, lets you compare and restore any snapshot, migrate a full instance to a new server in one command, and optionally version your backups in a Git repository.</p>
+      <p>Flowsave is an open-source CLI for <a href="https://n8n.io" target="_blank" rel="noopener">n8n</a> — self-hosted or cloud. It snapshots your workflows, encrypted credentials, and folder structure (n8n Enterprise or Cloud only — see <a href="#folder-compat">folder support</a>) to local disk, lets you compare and restore any snapshot, migrate a full instance to a new server in one command, and optionally version your backups in a Git repository.</p>
       <p><strong>Who it's for:</strong> Anyone running n8n — in Docker, on a VPS, on bare metal, or on n8n Cloud — who has ever lost a workflow to a bad upgrade, a deleted container, or an accidental edit. <strong>Note:</strong> credential backup requires Docker access and is unavailable on n8n Cloud. Workflow backup works on all setups via the REST API.</p>
       <h3>Design principles</h3>
       <ul>
@@ -864,7 +864,7 @@ footer {
         </table>
       </div>
 
-      <h3>n8n editions</h3>
+      <h3>Folder structure support</h3>
       <p>The folder REST API is an n8n <strong>Enterprise or Cloud</strong> feature. On Community edition, backups are complete but <em>flat</em> — folder layout is not preserved. Flowsave detects this and says so in every relevant summary.</p>
     </section>
 
@@ -1257,8 +1257,8 @@ footer {
     </section>
 
     <!-- EDITIONS -->
-    <section id="editions" class="docs-section">
-      <h2>Edition compatibility</h2>
+    <section id="folder-compat" class="docs-section">
+      <h2>Folder structure support</h2>
       <div class="compat-note-box">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:1px"><circle cx="8" cy="8" r="6.5" stroke="var(--accent)" stroke-width="1.2"/><path d="M8 5.5v3M8 10.5v.5" stroke="var(--accent)" stroke-width="1.4" stroke-linecap="round"/></svg>
         <p><strong>Folder structure</strong> is only preserved on n8n <strong>Enterprise or n8n Cloud</strong>. The folder REST API is gated by n8n's license — n8n's own limitation, not Flowsave's. On Community edition, all workflows are backed up and restored flat at root level. Flowsave records which mode applied in each snapshot's metadata.</p>
@@ -1289,20 +1289,30 @@ footer {
           <div class="compat-grid-note">Workflow backup works via REST API. Credential backup unavailable — Cloud doesn't allow container access.</div>
         </div>
       </div>
-      <div class="docs-table-wrap">
-        <table class="docs-table">
-          <thead><tr><th>Feature</th><th>Community (free)</th><th>Enterprise</th></tr></thead>
-          <tbody>
-            <tr><td>Workflow backup &amp; restore</td><td class="check">✓</td><td class="check">✓</td></tr>
-            <tr><td>Credential backup</td><td>✓ requires Docker</td><td class="check">✓</td></tr>
-            <tr><td>Credential restore — same-instance</td><td>✓ docker exec + auto-prune stale</td><td class="check">✓</td></tr>
-            <tr><td>Credential restore — cross-instance (API)</td><td>✓ simple creds; OAuth may fail</td><td class="check">✓</td></tr>
-            <tr><td>Credential restore — cross-instance (Docker)</td><td>✓ with <code>--target-container</code></td><td class="check">✓</td></tr>
-            <tr><td>Folder structure backup &amp; restore</td><td class="cross">✗ flat only</td><td class="check">✓ Enterprise &amp; Cloud</td></tr>
-          </tbody>
-        </table>
+      <p style="font-size:13px;font-weight:600;color:var(--text);margin:20px 0 10px">Folder backup &amp; restore — per setup</p>
+      <div class="compat-grid-table">
+        <div class="compat-grid-row header" style="grid-template-columns:2fr 1fr 1fr">
+          <span class="compat-grid-col-head">Setup</span>
+          <span class="compat-grid-col-head">Folder backup (read)</span>
+          <span class="compat-grid-col-head">Folder restore (write)</span>
+        </div>
+        <div class="compat-grid-row" style="grid-template-columns:2fr 1fr 1fr">
+          <div><div class="compat-grid-name">Self-hosted Community</div></div>
+          <div class="compat-grid-check" style="font-size:13px">❌ <span class="compat-grid-note">403/404 — falls back flat</span></div>
+          <div class="compat-grid-check" style="font-size:13px">❌ <span class="compat-grid-note">May fail — falls back flat</span></div>
+        </div>
+        <div class="compat-grid-row row-hl" style="grid-template-columns:2fr 1fr 1fr">
+          <div><div class="compat-grid-name">Self-hosted Enterprise</div></div>
+          <div class="compat-grid-check" style="font-size:13px">✅ <span class="compat-grid-note">Works via public API</span></div>
+          <div class="compat-grid-check" style="font-size:13px">⚠️ <span class="compat-grid-note">Uses undocumented internal API</span></div>
+        </div>
+        <div class="compat-grid-row" style="grid-template-columns:2fr 1fr 1fr">
+          <div><div class="compat-grid-name">n8n Cloud</div></div>
+          <div class="compat-grid-check" style="font-size:13px">✅ <span class="compat-grid-note">Likely works (Cloud = Enterprise features)</span></div>
+          <div class="compat-grid-check" style="font-size:13px">⚠️ <span class="compat-grid-note">Likely works but untested</span></div>
+        </div>
       </div>
-      <p>The folder REST API is license-gated by n8n. Community backups lose nothing — the layout is simply flat.</p>
+      <p>The folder REST API is license-gated by n8n. Community backups lose nothing — the layout is simply flat. On restore, folder creation uses n8n's internal API and falls back to flat if it fails.</p>
     </section>
 
     <div class="docs-divider"></div>
@@ -1418,7 +1428,7 @@ footer {
       <a href="#security" class="mobile-nav-link" onclick="closeMobileNav()">Security model</a>
       <a href="#storage" class="mobile-nav-link" onclick="closeMobileNav()">Storage layout</a>
       <a href="#errors" class="mobile-nav-link" onclick="closeMobileNav()">Exit codes</a>
-      <a href="#editions" class="mobile-nav-link" onclick="closeMobileNav()">Edition compatibility</a>
+      <a href="#folder-compat" class="mobile-nav-link" onclick="closeMobileNav()">Folder structure support</a>
     </div>
     <div class="mobile-nav-group">
       <span class="mobile-nav-label">Help</span>
