@@ -646,6 +646,28 @@ footer {
   .nav-hamburger { display: flex; }
   .mobile-search-btn { display: flex; }
 }
+/* ── Compatibility grid (mirrors landing page) ── */
+.compat-note-box {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: rgba(24,160,120,.07); border: 1px solid rgba(24,160,120,.18);
+  border-radius: var(--r-md); padding: 12px 16px; margin-bottom: 16px;
+}
+.compat-note-box p { font-size: 13px; color: var(--muted); line-height: 1.65; margin: 0; }
+.compat-grid-table { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; margin-bottom: 16px; }
+.compat-grid-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1.4fr; padding: 13px 20px; align-items: center; }
+.compat-grid-row.header { background: rgba(11,98,71,.04); border-bottom: 1px solid var(--border); }
+.compat-grid-row:not(.header) { border-bottom: 1px solid var(--hairline); }
+.compat-grid-row:not(.header):last-child { border-bottom: none; }
+.compat-grid-row.row-hl { background: rgba(24,160,120,.05); }
+.compat-grid-col-head { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.compat-grid-col-head:not(:first-child) { text-align: center; }
+.compat-grid-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.compat-grid-sub { font-size: 11px; color: var(--faint); margin-top: 2px; }
+.compat-grid-sub.good { color: var(--accent); }
+.compat-grid-check { text-align: center; font-size: 15px; }
+.compat-grid-note { font-size: 11px; color: var(--muted); }
+.compat-grid-note code { background: rgba(11,98,71,.08); padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+@media (max-width: 640px) { .compat-grid-table { overflow-x: auto; } .compat-grid-row { min-width: 520px; } }
 </style>
 </head>
 <body>
@@ -769,7 +791,7 @@ footer {
     <!-- OVERVIEW -->
     <section id="overview" class="docs-section">
       <h2>Overview</h2>
-      <p>Flowsave is an open-source CLI for <a href="https://n8n.io" target="_blank" rel="noopener">n8n</a> — self-hosted or cloud. It snapshots your workflows, folder structure, and encrypted credentials to local disk, lets you compare and restore any snapshot, migrate a full instance to a new server in one command, and optionally version your backups in a Git repository.</p>
+      <p>Flowsave is an open-source CLI for <a href="https://n8n.io" target="_blank" rel="noopener">n8n</a> — self-hosted or cloud. It snapshots your workflows, encrypted credentials, and folder structure (n8n Enterprise or Cloud only — see <a href="#editions">compatibility</a>) to local disk, lets you compare and restore any snapshot, migrate a full instance to a new server in one command, and optionally version your backups in a Git repository.</p>
       <p><strong>Who it's for:</strong> Anyone running n8n — in Docker, on a VPS, on bare metal, or on n8n Cloud — who has ever lost a workflow to a bad upgrade, a deleted container, or an accidental edit. <strong>Note:</strong> credential backup requires Docker access and is unavailable on n8n Cloud. Workflow backup works on all setups via the REST API.</p>
       <h3>Design principles</h3>
       <ul>
@@ -843,7 +865,7 @@ footer {
       </div>
 
       <h3>n8n editions</h3>
-      <p>The folder REST API is an n8n <strong>Enterprise</strong> feature. On Community edition, backups are complete but <em>flat</em> — folder layout is not preserved. Flowsave detects this and says so in every relevant summary.</p>
+      <p>The folder REST API is an n8n <strong>Enterprise or Cloud</strong> feature. On Community edition, backups are complete but <em>flat</em> — folder layout is not preserved. Flowsave detects this and says so in every relevant summary.</p>
     </section>
 
     <div class="docs-divider"></div>
@@ -914,7 +936,7 @@ footer {
       <h4>Output — Snapshot Summary</h4>
       <ul>
         <li>Snapshot ID, instance URL, n8n version (when detectable via Docker), timestamp, workflow count</li>
-        <li>Folder structure: <code>✓ included</code> / <code>✗ not included</code> (Enterprise-only feature)</li>
+        <li>Folder structure: <code>✓ included</code> / <code>✗ not included</code> (n8n Enterprise or Cloud only)</li>
         <li>Credentials: <code>✓ encrypted &amp; included</code> / <code>— not included</code></li>
         <li>Snapshot size, saved-to path</li>
       </ul>
@@ -1204,7 +1226,7 @@ footer {
     └── &lt;id&gt;/                   <span class="c-cmt"># one directory per snapshot</span>
         ├── meta.json            <span class="c-cmt"># snapshot metadata (counts, versions, flags)</span>
         ├── &lt;Workflow Name&gt;.json <span class="c-cmt"># one file per workflow (root = no folder)</span>
-        ├── &lt;Folder&gt;/…          <span class="c-cmt"># subdirectories mirror n8n folders (Enterprise)</span>
+        ├── &lt;Folder&gt;/…          <span class="c-cmt"># subdirectories mirror n8n folders (Enterprise or Cloud)</span>
         ├── _credentials.enc.json   <span class="c-cmt"># encrypted credential blob (optional)</span>
         └── _credentials.meta.json  <span class="c-cmt"># credential names+types, NO secrets (optional)</span></pre>
       </div>
@@ -1237,17 +1259,46 @@ footer {
     <!-- EDITIONS -->
     <section id="editions" class="docs-section">
       <h2>Edition compatibility</h2>
+      <div class="compat-note-box">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:1px"><circle cx="8" cy="8" r="6.5" stroke="var(--accent)" stroke-width="1.2"/><path d="M8 5.5v3M8 10.5v.5" stroke="var(--accent)" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <p><strong>Folder structure</strong> is only preserved on n8n <strong>Enterprise or n8n Cloud</strong>. The folder REST API is gated by n8n's license — n8n's own limitation, not Flowsave's. On Community edition, all workflows are backed up and restored flat at root level. Flowsave records which mode applied in each snapshot's metadata.</p>
+      </div>
+      <div class="compat-grid-table">
+        <div class="compat-grid-row header">
+          <span class="compat-grid-col-head">Setup</span>
+          <span class="compat-grid-col-head">Workflows</span>
+          <span class="compat-grid-col-head">Credentials</span>
+          <span class="compat-grid-col-head">Notes</span>
+        </div>
+        <div class="compat-grid-row row-hl">
+          <div><div class="compat-grid-name">Docker self-hosted</div><div class="compat-grid-sub good">Recommended — full support</div></div>
+          <div class="compat-grid-check">✅</div>
+          <div class="compat-grid-check">✅</div>
+          <div class="compat-grid-note">Backup + restore via <code>docker exec</code>. Folder structure preserved on Enterprise or Cloud.</div>
+        </div>
+        <div class="compat-grid-row">
+          <div><div class="compat-grid-name">Bare metal / PM2</div><div class="compat-grid-sub">No Docker on the host</div></div>
+          <div class="compat-grid-check">✅</div>
+          <div class="compat-grid-check">⚠️</div>
+          <div class="compat-grid-note">Credential backup needs Docker. Cross-instance restore works via REST API — OAuth credentials may fail.</div>
+        </div>
+        <div class="compat-grid-row">
+          <div><div class="compat-grid-name">n8n Cloud</div><div class="compat-grid-sub">Managed by n8n</div></div>
+          <div class="compat-grid-check">✅</div>
+          <div class="compat-grid-check" style="color:var(--faint)">—</div>
+          <div class="compat-grid-note">Workflow backup works via REST API. Credential backup unavailable — Cloud doesn't allow container access.</div>
+        </div>
+      </div>
       <div class="docs-table-wrap">
         <table class="docs-table">
           <thead><tr><th>Feature</th><th>Community (free)</th><th>Enterprise</th></tr></thead>
           <tbody>
             <tr><td>Workflow backup &amp; restore</td><td class="check">✓</td><td class="check">✓</td></tr>
-            <tr><td>Credential backup (source)</td><td>✓ requires Docker on source</td><td class="check">✓</td></tr>
+            <tr><td>Credential backup</td><td>✓ requires Docker</td><td class="check">✓</td></tr>
             <tr><td>Credential restore — same-instance</td><td>✓ docker exec + auto-prune stale</td><td class="check">✓</td></tr>
             <tr><td>Credential restore — cross-instance (API)</td><td>✓ simple creds; OAuth may fail</td><td class="check">✓</td></tr>
             <tr><td>Credential restore — cross-instance (Docker)</td><td>✓ with <code>--target-container</code></td><td class="check">✓</td></tr>
-            <tr><td>Folder structure in backup</td><td class="cross">✗</td><td class="check">✓</td></tr>
-            <tr><td>Folder structure on restore</td><td class="cross">✗</td><td class="check">✓</td></tr>
+            <tr><td>Folder structure backup &amp; restore</td><td class="cross">✗ flat only</td><td class="check">✓ Enterprise &amp; Cloud</td></tr>
           </tbody>
         </table>
       </div>
